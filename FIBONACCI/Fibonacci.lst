@@ -1,0 +1,212 @@
+MPASM  5.51                     FIBONACCI.ASM   6-8-2023  21:22:08         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;************************************* Fibonacci.asm ************************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Los términos de la secuencia de Fibonacci son: 0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, ...
+                      00010 ; En esta secuencia cada número es la suma de los dos términos que le preceden. Por ejemplo,
+                      00011 ; el término que sigue al 55 será 34 + 55= 89.
+                      00012 ;
+                      00013 ; Obtener el último término de la secuencia de Fibonacci menor de 256 y sacar ese valor
+                      00014 ; por el puerto de salida. 
+                      00015 ;
+                      00016 ; ZONA DE DATOS **********************************************************************
+                      00017 
+2007   3FF1           00018         __CONFIG   _CP_OFF &  _WDT_OFF & _PWRTE_ON & _XT_OSC
+                      00019         LIST       P=16F84A
+                      00020         INCLUDE  <P16F84A.INC>
+                      00001         LIST
+                      00002 
+                      00003 ;==========================================================================
+                      00004 ;  MPASM PIC16F84A processor include
+                      00005 ; 
+                      00006 ;  (c) Copyright 1999-2013 Microchip Technology, All rights reserved
+                      00007 ;==========================================================================
+                      00008 
+                      00208         LIST
+                      00021 
+                      00022         CBLOCK  0x0C
+  0000000C            00023         Penultimo                       ; Ocupa la posición 0x0C de RAM.
+  0000000D            00024         Ultimo                          ; Ocupa la posición 0x0D de RAM.
+  0000000E            00025         Suma                            ; Ocupa la posición 0x0E de RAM.
+                      00026         ENDC
+                      00027 
+                      00028 ; ZONA DE CÓDIGOS ********************************************************************
+                      00029 
+0000                  00030         ORG     0                       ; El programa comienza en la dirección 0.
+0000                  00031 Inicio
+0000   1683           00032         bsf     STATUS,RP0              ; Acceso al Banco 1.
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0001   0186           00033         clrf    TRISB                   ; Las líneas del Puerto B se configuran como salida.
+0002   1283           00034         bcf     STATUS,RP0              ; Acceso al Banco 0.
+0003                  00035 Principal
+0003   018C           00036         clrf    Penultimo               ; Asigna 0 al penúltimo término de Fibonacci y
+0004   3001           00037         movlw   .1                      ; 1 al último. Son las "semillas".
+0005                  00038 SigueSumando
+0005   008D           00039         movwf   Ultimo                  ; Asigna (W) al (Ultimo) término de Fibonacci.
+0006   070C           00040         addwf   Penultimo,W             ; Suma términos último y penúltimo.
+0007   008E           00041         movwf   Suma                    ; (Suma)=(Penultimo)+(Ultimo).
+0008   1803           00042         btfsc   STATUS,C                ; ¿C=0?, ¿(W)<256?
+0009   280E           00043         goto    Fin                     ; No, por tanto ha excedido del máximo y sale.
+MPASM  5.51                     FIBONACCI.ASM   6-8-2023  21:22:08         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+000A   080D           00044         movf    Ultimo,W                ; Sí, por tanto el (Ultimo) pasa al (Penultimo).
+000B   008C           00045         movwf   Penultimo
+000C   080E           00046         movf    Suma,W                  ; Y la (Suma) al (Ultimo).
+000D   2805           00047         goto    SigueSumando
+000E   080D           00048 Fin     movfw   Ultimo                  ; En (Ultimo) el término de Fibonacci buscado.
+000F   0086           00049         movwf   PORTB                   ; Resultado se visualiza por el puerto de salida.
+0010   0063           00050         sleep
+                      00051 
+                      00052         END
+MPASM  5.51                     FIBONACCI.ASM   6-8-2023  21:22:08         PAGE  3
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+C                                 00000000
+DC                                00000001
+EEADR                             00000009
+EECON1                            00000088
+EECON2                            00000089
+EEDATA                            00000008
+EEIE                              00000006
+EEIF                              00000004
+F                                 00000001
+FSR                               00000004
+Fin                               0000000E
+GIE                               00000007
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+Inicio                            00000000
+NOT_PD                            00000003
+NOT_RBPU                          00000007
+NOT_TO                            00000004
+OPTION_REG                        00000081
+PCL                               00000002
+PCLATH                            0000000A
+PORTA                             00000005
+PORTB                             00000006
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+Penultimo                         0000000C
+Principal                         00000003
+RA0                               00000000
+RA1                               00000001
+RA2                               00000002
+RA3                               00000003
+RA4                               00000004
+RB0                               00000000
+RB1                               00000001
+RB2                               00000002
+RB3                               00000003
+RB4                               00000004
+RB5                               00000005
+RB6                               00000006
+RB7                               00000007
+RBIE                              00000003
+RBIF                              00000000
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+STATUS                            00000003
+SigueSumando                      00000005
+MPASM  5.51                     FIBONACCI.ASM   6-8-2023  21:22:08         PAGE  4
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+Suma                              0000000E
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+TMR0                              00000001
+TMR0IE                            00000005
+TMR0IF                            00000002
+TRISA                             00000085
+TRISA0                            00000000
+TRISA1                            00000001
+TRISA2                            00000002
+TRISA3                            00000003
+TRISA4                            00000004
+TRISB                             00000086
+TRISB0                            00000000
+TRISB1                            00000001
+TRISB2                            00000002
+TRISB3                            00000003
+TRISB4                            00000004
+TRISB5                            00000005
+TRISB6                            00000006
+TRISB7                            00000007
+Ultimo                            0000000D
+W                                 00000000
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_CONFIG                           00002007
+_CP_OFF                           00003FFF
+_CP_ON                            0000000F
+_DEVID1                           00002006
+_FOSC_EXTRC                       00003FFF
+_FOSC_HS                          00003FFE
+_FOSC_LP                          00003FFC
+_FOSC_XT                          00003FFD
+_HS_OSC                           00003FFE
+_IDLOC0                           00002000
+_IDLOC1                           00002001
+_IDLOC2                           00002002
+_IDLOC3                           00002003
+_LP_OSC                           00003FFC
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC                           00003FFF
+_WDTE_OFF                         00003FFB
+_WDTE_ON                          00003FFF
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FFD
+__16F84A                          00000001
+__DEBUG                           1
+MPASM  5.51                     FIBONACCI.ASM   6-8-2023  21:22:08         PAGE  5
+
+
+MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
+
+
+0000 : XXXXXXXXXXXXXXXX X--------------- ---------------- ----------------
+2000 : -------X-------- ---------------- ---------------- ----------------
+
+All other memory blocks unused.
+
+Program Memory Words Used:    17
+Program Memory Words Free:  1007
+
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :     1 reported,     0 suppressed
+
+

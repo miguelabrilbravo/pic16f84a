@@ -1,0 +1,11 @@
+Message[302] E:\00.-MPLAB\00.-PIC16F84A\EEPROM_02\EEPROM.INC 24 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] E:\00.-MPLAB\00.-PIC16F84A\EEPROM_02\EEPROM.INC 26 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] E:\00.-MPLAB\00.-PIC16F84A\EEPROM_02\EEPROM.INC 54 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] E:\00.-MPLAB\00.-PIC16F84A\EEPROM_02\EEPROM.INC 59 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] E:\00.-MPLAB\00.-PIC16F84A\EEPROM_02\EEPROM.INC 61 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] E:\00.-MPLAB\00.-PIC16F84A\EEPROM_02\EEPROM.INC 62 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] E:\00.-MPLAB\00.-PIC16F84A\EEPROM_02\EEPROM.INC 64 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] E:\00.-MPLAB\00.-PIC16F84A\EEPROM_02\EEPROM.INC 66 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] E:\00.-MPLAB\00.-PIC16F84A\EEPROM_02\EEPROM.INC 67 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] E:\00.-MPLAB\00.-PIC16F84A\EEPROM_02\LCD_4BIT.INC 91 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] E:\00.-MPLAB\00.-PIC16F84A\EEPROM_02\LCD_4BIT.INC 108 : Register in operand not in bank 0.  Ensure that bank bits are correct.

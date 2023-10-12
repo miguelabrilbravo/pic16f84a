@@ -1,0 +1,216 @@
+MPASM 03.50 Released                          INDEXADO_02.ASM   10-15-2003  11:29:51         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;********************************** Indexado_02.asm *************************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Controla el nivel de un depósito de líquido. Utiliza (entre paréntesis las líneas del
+                      00010 ; microcontrolador a la que se han conectado):
+                      00011 ;     - Tres sondas detectoras: SV, Sonda de Vacío (RA0); SLL, Sonda de LLenado (RA1);
+                      00012 ;       SR, Sonda de Rebose (RA2).
+                      00013 ;     - Dos bombas de agua: B1 (RB5), B2 (RB6).
+                      00014 ;     - Cinco indicadores: Vacio (RB0), Llenandose (RB1), Lleno (RB2), Rebose (RB3),
+                      00015 ;       Alarma (RB4).
+                      00016 ;
+                      00017 ; Su funcionamiento: 
+                      00018 ;    -  Cuando ninguna de las sondas está mojada, entiende que el depósito está vacío y
+                      00019 ;       se accionarán las dos bombas. El indicador "Vacio" se iluminará .
+                      00020 ;    -  Cuando el nivel del líquido toque la sonda de vacío "SV" seguirá llenándose el
+                      00021 ;       depósito con las dos bombas. El indicador "Llenandose" se ilumina.
+                      00022 ;    -  Cuando el nivel del líquido toca la sonda de llenado "SLL", para la bomba B2, quedando
+                      00023 ;       B1 activada en modo mantenimiento. El indicador "Lleno" se ilumina.
+                      00024 ;    -  Si el nivel del líquido moja la sonda de rebose "SR", apaga también la bomba B1,
+                      00025 ;       quedando las dos bombas fuera de servicio. El indicador "Rebose" se enciende.
+                      00026 ;   -   Cuando se produce un fallo o mal funcionamiento en las sondas de entrada, (por
+                      00027 ;       ejemplo que se active la sonda de rebose y no active la de vacío), se paran
+                      00028 ;       las dos bombas. El indicador "Alarma" se ilumina.
+                      00029 ;
+                      00030 ; Según el enunciado del problema, teniendo en cuenta las conexiones citadas y poniendo la
+                      00031 ; salida no utilizada (RB7) siempre a cero, la tabla de verdad resultante es:
+                      00032 ;
+                      00033 ; RA2.. RA0 | RB7 ...          ... RB0
+                      00034 ; ------------|--------------------------------
+                      00035 ;  0   0   0  |  0   1   1   0   0   0   0   1  (Configuración 0. Estado "Vacio").
+                      00036 ;  0   0   1  |  0   1   1   0   0   0   1   0  (Configuración 1. Estado "Llenandose").
+                      00037 ;  0   1   0  |  0   0   0   1   0   0   0   0  (Configuración 2. Estado "Alarma").
+                      00038 ;  0   1   1  |  0   0   1   0   0   1   0   0  (Configuración 3. Estado "Lleno").
+                      00039 ;  1   0   0  |  0   0   0   1   0   0   0   0  (Configuración 4. Estado "Alarma").
+                      00040 ;  1   0   1  |  0   0   0   1   0   0   0   0  (Configuración 5. Estado "Alarma").
+                      00041 ;  1   1   0  |  0   0   0   1   0   0   0   0  (Configuración 6. Estado "Alarma").
+                      00042 ;  1   1   1  |  0   0   0   0   1   0   0   0  (Configuración 7. Estado "Rebose").
+                      00043 ;
+                      00044 ; ZONA DE DATOS **********************************************************************
+                      00045 
+2007   3FF1           00046         __CONFIG   _CP_OFF &  _WDT_OFF & _PWRTE_ON & _XT_OSC
+                      00047         LIST       P=16F84A
+                      00048         INCLUDE  <P16F84A.INC>
+                      00001         LIST
+                      00002 ; P16F84A.INC  Standard Header File, Version 2.00    Microchip Technology, Inc.
+                      00134         LIST
+                      00049 
+                      00050 ; ZONA DE CÓDIGOS ********************************************************************
+MPASM 03.50 Released                          INDEXADO_02.ASM   10-15-2003  11:29:51         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00051 
+0000                  00052         ORG     0                       ; El programa comienza en la dirección 0.
+0000                  00053 Inicio
+0000   0186           00054         clrf    PORTB                   ; Debe estar a cero cuando el puerto se configure
+                      00055                                         ; como salida.
+0001   1683           00056         bsf     STATUS,RP0              ; Acceso al Banco 1.
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0002   0186           00057         clrf    TRISB                   ; Las líneas del Puerto B se configuran como salida.
+0003   301F           00058         movlw   b'00011111'             ; Las 5 líneas del Puerto A se configuran como entrada.
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0004   0085           00059         movwf   TRISA
+0005   1283           00060         bcf     STATUS,RP0              ; Acceso al Banco 0.
+0006                  00061 Principal
+0006   0805           00062         movf    PORTA,W                 ; Lee los sensores.
+0007   3907           00063         andlw   b'00000111'             ; Máscara para quedarse con valor de los sensores.
+0008   0782           00064         addwf   PCL,F                   ; Salta a la configuración adecuada.
+0009   2811           00065         goto    Configuracion0
+000A   2813           00066         goto    Configuracion1
+000B   2815           00067         goto    Configuracion2
+000C   2817           00068         goto    Configuracion3
+000D   2819           00069         goto    Configuracion4
+000E   281B           00070         goto    Configuracion5
+000F   281D           00071         goto    Configuracion6
+0010   281F           00072         goto    Configuracion7
+0011                  00073 Configuracion0
+0011   3061           00074         movlw   b'01100001'             ; Estado "Vacio". (Configuración 0).
+0012   2820           00075         goto    ActivaSalida
+0013                  00076 Configuracion1
+0013   3062           00077         movlw   b'01100010'             ; Estado "Llenándose". (Configuración 1).
+0014   2820           00078         goto    ActivaSalida
+0015                  00079 Configuracion2
+0015   3010           00080         movlw   b'00010000'             ; Estado "Alarma". (Configuración 2).
+0016   2820           00081         goto    ActivaSalida
+0017                  00082 Configuracion3
+0017   3024           00083         movlw   b'00100100'             ; Estado "Lleno". (Configuración 3).
+0018   2820           00084         goto    ActivaSalida
+0019                  00085 Configuracion4
+0019   3010           00086         movlw   b'00010000'             ; Estado "Alarma". (Configuración 4).
+001A   2820           00087         goto    ActivaSalida
+001B                  00088 Configuracion5
+001B   3010           00089         movlw   b'00010000'             ; Estado "Alarma". (Configuración 5).
+001C   2820           00090         goto    ActivaSalida
+001D                  00091 Configuracion6
+001D   3010           00092         movlw   b'00010000'             ; Estado "Alarma". (Configuración 6).
+001E   2820           00093         goto    ActivaSalida
+001F                  00094 Configuracion7
+001F   3008           00095         movlw   b'00001000'             ; Estado "Rebose". (Configuración 7).
+0020                  00096 ActivaSalida
+0020   0086           00097         movwf   PORTB                   ; Visualiza por el puerto de salida.
+0021   2806           00098         goto    Principal
+                      00099 
+                      00100         END
+MPASM 03.50 Released                          INDEXADO_02.ASM   10-15-2003  11:29:51         PAGE  3
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+ActivaSalida                      00000020
+C                                 00000000
+Configuracion0                    00000011
+Configuracion1                    00000013
+Configuracion2                    00000015
+Configuracion3                    00000017
+Configuracion4                    00000019
+Configuracion5                    0000001B
+Configuracion6                    0000001D
+Configuracion7                    0000001F
+DC                                00000001
+EEADR                             00000009
+EECON1                            00000088
+EECON2                            00000089
+EEDATA                            00000008
+EEIE                              00000006
+EEIF                              00000004
+F                                 00000001
+FSR                               00000004
+GIE                               00000007
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+Inicio                            00000000
+NOT_PD                            00000003
+NOT_RBPU                          00000007
+NOT_TO                            00000004
+OPTION_REG                        00000081
+PCL                               00000002
+PCLATH                            0000000A
+PORTA                             00000005
+PORTB                             00000006
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+Principal                         00000006
+RBIE                              00000003
+RBIF                              00000000
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+STATUS                            00000003
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+TMR0                              00000001
+TRISA                             00000085
+TRISB                             00000086
+MPASM 03.50 Released                          INDEXADO_02.ASM   10-15-2003  11:29:51         PAGE  4
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+W                                 00000000
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_CP_OFF                           00003FFF
+_CP_ON                            0000000F
+_HS_OSC                           00003FFE
+_LP_OSC                           00003FFC
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC                           00003FFF
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FFD
+__16F84A                          00000001
+
+
+MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
+
+0000 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XX-------------- ----------------
+2000 : -------X-------- ---------------- ---------------- ----------------
+
+All other memory blocks unused.
+
+Program Memory Words Used:    34
+Program Memory Words Free:   990
+
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :     2 reported,     0 suppressed
+
+

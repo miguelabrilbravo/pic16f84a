@@ -1,0 +1,144 @@
+MPASM 03.50 Released                          INDEXADO_03.ASM   11-3-2003  12:06:45         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;************************************** Indexado_03.asm *********************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Programa para comprobar el efecto de un uso incorrecto de la instrucción "addwf PCL,F".
+                      00010 ; Se debe comprobar con el simulador del MPLAB.
+                      00011 ;
+                      00012 ; ZONA DE DATOS **********************************************************************
+                      00013 
+                      00014         INCLUDE  <P16F84.INC>   
+                      00001         LIST
+                      00002 ; P16F84.INC  Standard Header File, Version 2.00    Microchip Technology, Inc.
+Message[301]: MESSAGE: (Processor-header file mismatch.  Verify selected processor.)
+                      00136         LIST
+                      00015         LIST       P=16F84
+                      00016 
+                      00017 ; ZONA DE CÓDIGOS ********************************************************************
+                      00018 
+0000                  00019         ORG     0
+0000                  00020 Inicio
+0000   28FE           00021         goto    Principal               ; Posición 000h de memoria de programa.
+0001   0103           00022         clrw                            ; Posición 001h de memoria de programa.
+0002   2800           00023         goto    Inicio                  ; Posición 002h de memoria de programa.
+                      00024 
+00FE                  00025         ORG     0xFE                    ; Fija la posición de la memoria de programa en 0x0FE.
+00FE                  00026 Principal
+00FE   3001           00027         movlw   .1                      ; Posición 0FEh de memoria de programa.
+00FF   0782           00028         addwf   PCL,F                   ; Posición 0FFh de memoria de programa.
+0100   2902           00029         goto    Configuracion0          ; Posición 100h de memoria de programa.
+0101   2902           00030         goto    Configuracion1          ; Posición 101h de memoria de programa.
+                      00031         
+                      00032 ; La intención de la instrucción "addwf PCL,F" es saltar a la posición de la instrucción 
+                      00033 ; "goto Configuracion1", que está en la posición 101h de memoria de programa pero, como el
+                      00034 ; contenido del registro PCLATH no ha cambiado de valor, realmente salta a la posición que 
+                      00035 ; indica el contador de programa que en este caso es (PC)=(PCLATH)(PCL) = 0001h, es decir, ha 
+                      00036 ; saltado a la posición donde se encuentra la instrucción "clrw". El salto se ha descontrolado.
+                      00037 
+0102                  00038 Configuracion0
+0102                  00039 Configuracion1
+                      00040 
+                      00041         END                             ; Fin del programa.
+MPASM 03.50 Released                          INDEXADO_03.ASM   11-3-2003  12:06:45         PAGE  2
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+C                                 00000000
+Configuracion0                    00000102
+Configuracion1                    00000102
+DC                                00000001
+EEADR                             00000009
+EECON1                            00000088
+EECON2                            00000089
+EEDATA                            00000008
+EEIE                              00000006
+EEIF                              00000004
+F                                 00000001
+FSR                               00000004
+GIE                               00000007
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+Inicio                            00000000
+NOT_PD                            00000003
+NOT_RBPU                          00000007
+NOT_TO                            00000004
+OPTION_REG                        00000081
+PCL                               00000002
+PCLATH                            0000000A
+PORTA                             00000005
+PORTB                             00000006
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+Principal                         000000FE
+RBIE                              00000003
+RBIF                              00000000
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+STATUS                            00000003
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+TMR0                              00000001
+TRISA                             00000085
+TRISB                             00000086
+W                                 00000000
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_CP_OFF                           00003FFF
+_CP_ON                            0000000F
+MPASM 03.50 Released                          INDEXADO_03.ASM   11-3-2003  12:06:45         PAGE  3
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+_HS_OSC                           00003FFE
+_LP_OSC                           00003FFC
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC                           00003FFF
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FFD
+__16F84A                          00000001
+
+
+MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
+
+0000 : XXX------------- ---------------- ---------------- ----------------
+00C0 : ---------------- ---------------- ---------------- --------------XX
+0100 : XX-------------- ---------------- ---------------- ----------------
+
+All other memory blocks unused.
+
+Program Memory Words Used:     7
+Program Memory Words Free:  1017
+
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :     1 reported,     0 suppressed
+
+

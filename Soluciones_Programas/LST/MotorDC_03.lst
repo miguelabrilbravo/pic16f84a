@@ -1,0 +1,272 @@
+MPASM 03.50 Released                           MOTORDC_03.ASM   10-30-2000  10:07:22         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;*********************************** MotorDC_03.asm ***********************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Programa de control de velocidad de un motor de corriente continua mediante la modulación
+                      00010 ; de anchura de pulso (PWM) similar al MotorDC_02.asm donde el control de tiempos se realiza
+                      00011 ; mediante interrupciones por desbordamiento del Timer 0.
+                      00012 ;
+                      00013 ; El sentido de giro del motor se decide en función del valor de la línea RA4.
+                      00014 ;
+                      00015 ; El control de las lineas de salida se realizará mediante direccionamiento por bit con 
+                      00016 ; las instrucciones "bsf" y "bcf".
+                      00017 ;
+                      00018 ; ZONA DE DATOS **********************************************************************
+                      00019 
+2007   3FF1           00020         __CONFIG   _CP_OFF &  _WDT_OFF & _PWRTE_ON & _XT_OSC
+                      00021         LIST       P=16F84A
+                      00022         INCLUDE  <P16F84A.INC>
+                      00001         LIST
+                      00002 ; P16F84A.INC  Standard Header File, Version 2.00    Microchip Technology, Inc.
+                      00134         LIST
+                      00023 
+                      00024         CBLOCK  0x0C
+  0000000C            00025         CicloTrabajo                    ; Ciclo de trabajo deseado.
+  0000000D            00026         GuardaEntrada
+  0000000E            00027         Timer0_ContadorA                        ; Contador auxiliar.
+                      00028         ENDC
+                      00029 
+  FFFFFF0B            00030 TMR0_Carga      EQU     -d'245'         ; Valor obtenido experimentalmente con la ventana
+                      00031                                         ; "Stopwatch" para un tiempo de 1 ms.
+  0000000A            00032 MaximaEntrada   EQU     .10
+                      00033 
+                      00034 #DEFINE  SalidaSentido0 PORTB,0         ; Salidas que determinan el sentido de giro.
+                      00035 #DEFINE  SalidaSentido1 PORTB,1
+                      00036 #DEFINE  SalidaMarcha   PORTB,4         ; Salida  de puesta en marcha o paro del motor.
+                      00037 #DEFINE  EntradaSentido PORTA,4         ; Interruptor de sentido de giro.
+                      00038 
+                      00039 ; ZONA DE CÓDIGOS ********************************************************************
+                      00040 
+0000                  00041         ORG     0
+0000   2810           00042         goto    Inicio
+0004                  00043         ORG     .4
+0004   2835           00044         goto    Timer0_Interrupcion
+                      00045 
+0005                  00046 SeleccionaCicloTrabajo
+0005   0782           00047         addwf   PCL,F
+0006   3400 340A 3414 00048         DT      d'0', d'10', d'20', d'30', d'40', d'50', d'60', d'70', d'80', d'90'
+       341E 3428 3432 
+       343C 3446 3450 
+MPASM 03.50 Released                           MOTORDC_03.ASM   10-30-2000  10:07:22         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+       345A 
+0010                  00049 Inicio
+0010   1683           00050         bsf     STATUS,RP0
+0011   1206           00051         bcf     SalidaMarcha            ; Estas líneas se configuran como salida.
+0012   1006           00052         bcf     SalidaSentido0
+0013   1086           00053         bcf     SalidaSentido1
+0014   301F           00054         movlw   b'00011111'             ; Puerto A configurado como entrada.
+0015   0085           00055         movwf   PORTA
+0016   3001           00056         movlw   b'00000001'             ; TMR0 con prescaler de 4.
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0017   0081           00057         movwf   OPTION_REG
+0018   1283           00058         bcf     STATUS,RP0
+0019   1206           00059         bcf     SalidaMarcha            ; Al principio el motor parado.
+001A                  00060 Principal
+001A   1A05           00061         btfsc   EntradaSentido          ; Comprueba el sentido de giro deseado.
+001B   281F           00062         goto    OtroSentido
+001C   1406           00063         bsf     SalidaSentido0          ; Gira en un sentido.
+001D   1086           00064         bcf     SalidaSentido1  
+001E   2821           00065         goto    TesteaVelocidad
+001F                  00066 OtroSentido
+001F   1006           00067         bcf     SalidaSentido0          ; Gira en el sentido opuesto.
+0020   1486           00068         bsf     SalidaSentido1
+0021                  00069 TesteaVelocidad
+0021   0805           00070         movf    PORTA,W         ; Lee el puerto de entrada
+0022   390F           00071         andlw   b'00001111'
+0023   008D           00072         movwf   GuardaEntrada           ; Guarda el valor.
+0024   1903           00073         btfsc   STATUS,Z                
+0025   2830           00074         goto    DC_CeroPorCiento
+0026   3C0A           00075         sublw   MaximaEntrada           ; (W)=10-(PORTA)
+0027   1903           00076         btfsc   STATUS,Z
+0028   2832           00077         goto    DC_100PorCiento 
+0029   1C03           00078         btfss   STATUS,C                ; ¿C=1?, ¿(W) positivo?, ¿(PORTA)<=10?
+002A   2830           00079         goto    DC_CeroPorCiento                ; Ha resultado (PORTA>10)
+002B   080D           00080         movf    GuardaEntrada,W
+002C   008C           00081         movwf   CicloTrabajo
+002D   30A0           00082         movlw   b'10100000'
+002E   008B           00083         movwf   INTCON                  ; Autoriza interrupción T0I y la general (GIE).
+002F   2834           00084         goto    Fin
+0030                  00085 DC_CeroPorCiento
+0030   1206           00086         bcf     SalidaMarcha            ; Pone la salida siempre en bajo.
+0031   2833           00087         goto    InhabilitaInterrupcion
+0032                  00088 DC_100PorCiento
+0032   1606           00089         bsf     SalidaMarcha            ; Pone la salida siempre en alto.
+0033                  00090 InhabilitaInterrupcion
+0033   018B           00091         clrf    INTCON                  ; Inhabilita interrupciones.
+0034   281A           00092 Fin     goto    Principal
+                      00093 
+                      00094 ; Subrutina "Timer0_Interrupcion" -------------------------------------------------------
+                      00095 ;
+                      00096 ; Mantiene la salida en alto un tiempo igual a 1 ms x (CicloTrabajo)
+                      00097 ; y en bajo un tiempo igual a 1 ms x (10-CicloTrabajo).
+                      00098 ;
+                      00099         CBLOCK  
+MPASM 03.50 Released                           MOTORDC_03.ASM   10-30-2000  10:07:22         PAGE  3
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+  0000000F            00100         Guarda_W
+  00000010            00101         Guarda_STATUS
+                      00102         ENDC
+                      00103 
+0035                  00104 Timer0_Interrupcion
+0035   008F           00105         movwf   Guarda_W                ; Guarda los valores de tenían W y STATUS en el
+0036   0E03           00106         swapf   STATUS,W                ; programa principal.
+0037   0090           00107         movwf   Guarda_STATUS
+0038   1283           00108         bcf     STATUS,RP0              ; Garantiza que trabaja en el Banco 0.
+0039   300B           00109         movlw   TMR0_Carga
+003A   0081           00110         movwf   TMR0
+003B   0B8E           00111         decfsz  Timer0_ContadorA,F      ; Decrementa el contador.
+003C   2847           00112         goto    Fin_Timer0_Interrupcion
+003D   1A06           00113         btfsc   SalidaMarcha            ; Testea el anterior estado de la salida.
+003E   2843           00114         goto    EstabaAlto
+003F                  00115 EstabaBajo
+003F   1606           00116         bsf     SalidaMarcha            ; Estaba bajo y lo pasa a alto.
+0040   080C           00117         movf    CicloTrabajo,W          ; Repone el contador nuevamente con el tiempo en 
+0041   008E           00118         movwf   Timer0_ContadorA                ; alto.
+0042   2847           00119         goto    Fin_Timer0_Interrupcion
+0043                  00120 EstabaAlto
+0043   1206           00121         bcf     SalidaMarcha            ; Estaba alto y lo pasa a bajo.
+0044   080C           00122         movf    CicloTrabajo,W          ; Repone el contador nuevamente con el tiempo
+0045   3C0A           00123         sublw   .10                     ; en bajo.
+0046   008E           00124         movwf   Timer0_ContadorA
+0047                  00125 Fin_Timer0_Interrupcion
+0047   0E10           00126         swapf   Guarda_STATUS,W ; Restaura registros W y STATUS.
+0048   0083           00127         movwf   STATUS
+0049   0E8F           00128         swapf   Guarda_W,F
+004A   0E0F           00129         swapf   Guarda_W,W
+004B   100B           00130         bcf     INTCON,RBIF
+004C   110B           00131         bcf     INTCON,T0IF
+004D   0009           00132         retfie
+                      00133 
+                      00134         END
+MPASM 03.50 Released                           MOTORDC_03.ASM   10-30-2000  10:07:22         PAGE  4
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+C                                 00000000
+CicloTrabajo                      0000000C
+DC                                00000001
+DC_100PorCiento                   00000032
+DC_CeroPorCiento                  00000030
+EEADR                             00000009
+EECON1                            00000088
+EECON2                            00000089
+EEDATA                            00000008
+EEIE                              00000006
+EEIF                              00000004
+EntradaSentido                    PORTA,4
+EstabaAlto                        00000043
+EstabaBajo                        0000003F
+F                                 00000001
+FSR                               00000004
+Fin                               00000034
+Fin_Timer0_Interrupcion           00000047
+GIE                               00000007
+GuardaEntrada                     0000000D
+Guarda_STATUS                     00000010
+Guarda_W                          0000000F
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+InhabilitaInterrupcion            00000033
+Inicio                            00000010
+MaximaEntrada                     0000000A
+NOT_PD                            00000003
+NOT_RBPU                          00000007
+NOT_TO                            00000004
+OPTION_REG                        00000081
+OtroSentido                       0000001F
+PCL                               00000002
+PCLATH                            0000000A
+PORTA                             00000005
+PORTB                             00000006
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+Principal                         0000001A
+RBIE                              00000003
+RBIF                              00000000
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+STATUS                            00000003
+SalidaMarcha                      PORTB,4
+SalidaSentido0                    PORTB,0
+MPASM 03.50 Released                           MOTORDC_03.ASM   10-30-2000  10:07:22         PAGE  5
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+SalidaSentido1                    PORTB,1
+SeleccionaCicloTrabajo            00000005
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+TMR0                              00000001
+TMR0_Carga                        FFFFFF0B
+TRISA                             00000085
+TRISB                             00000086
+TesteaVelocidad                   00000021
+Timer0_ContadorA                  0000000E
+Timer0_Interrupcion               00000035
+W                                 00000000
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_CP_OFF                           00003FFF
+_CP_ON                            0000000F
+_HS_OSC                           00003FFE
+_LP_OSC                           00003FFC
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC                           00003FFF
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FFD
+__16F84A                          00000001
+
+
+MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
+
+0000 : X---XXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0040 : XXXXXXXXXXXXXX-- ---------------- ---------------- ----------------
+2000 : -------X-------- ---------------- ---------------- ----------------
+
+All other memory blocks unused.
+
+Program Memory Words Used:    75
+Program Memory Words Free:   949
+
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :     1 reported,     0 suppressed
+
+

@@ -1,0 +1,36 @@
+MPLINK 4.49, Linker
+Linker Map File - Created Wed Jun 07 20:06:40 2023
+
+                                 Section Info
+                  Section       Type    Address   Location Size(Bytes)
+                ---------  ---------  ---------  ---------  ---------
+                   .org_0       code   0x000000    program   0x000000
+                   .org_1       code   0x000000    program   0x000012
+.config_2007_ELEMENTAL_09.O       code   0x002007    program   0x000002
+
+
+
+                              Program Memory Usage 
+                               Start         End      
+                           ---------   ---------      
+                            0x000000    0x000008      
+                            0x002007    0x002007      
+            10 out of 1094 program addresses used, program memory utilization is 0%
+
+
+
+                              Symbols - Sorted by Name
+                     Name    Address   Location    Storage File                     
+                ---------  ---------  ---------  --------- ---------                
+                   Inicio   0x000000    program     static E:\00.-MPLAB\00.-PIC16F84A\ELEMENTAL_09\Elemental_09.asm
+                Principal   0x000005    program     static E:\00.-MPLAB\00.-PIC16F84A\ELEMENTAL_09\Elemental_09.asm
+
+
+
+                              Symbols - Sorted by Address
+                     Name    Address   Location    Storage File                     
+                ---------  ---------  ---------  --------- ---------                
+                   Inicio   0x000000    program     static E:\00.-MPLAB\00.-PIC16F84A\ELEMENTAL_09\Elemental_09.asm
+                Principal   0x000005    program     static E:\00.-MPLAB\00.-PIC16F84A\ELEMENTAL_09\Elemental_09.asm
+
+

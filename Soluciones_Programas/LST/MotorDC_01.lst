@@ -1,0 +1,144 @@
+MPASM 03.50 Released                           MOTORDC_01.ASM   10-29-2000  19:15:51         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;************************************* MotorDC_01.asm **********************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Programa de control para un motor de corriente continua en funcionamiento y sentido de
+                      00010 ; giro. Con RA0=0, el motor se pone en marcha y su sentido de giro dependerá del valor
+                      00011 ; que tenga RA4.
+                      00012 ;
+                      00013 ; ZONA DE DATOS **********************************************************************
+                      00014 
+2007   3FF1           00015         __CONFIG   _CP_OFF &  _WDT_OFF & _PWRTE_ON & _XT_OSC
+                      00016         LIST       P=16F84A
+                      00017         INCLUDE  <P16F84A.INC>
+                      00001         LIST
+                      00002 ; P16F84A.INC  Standard Header File, Version 2.00    Microchip Technology, Inc.
+                      00134         LIST
+                      00018 
+                      00019 #DEFINE  EntradaMarcha  PORTA,0         ; Interruptor de puesta en marcha.
+                      00020 #DEFINE  EntradaSentido PORTA,4         ; Interruptor de sentido de giro.
+                      00021 
+                      00022 ; ZONA DE CÓDIGOS ********************************************************************
+                      00023 
+0000                  00024         ORG     0
+0000                  00025 Inicio
+0000   1683           00026         bsf     STATUS,RP0
+0001   1405           00027         bsf     EntradaMarcha           ; Configura las líneas de entrada.
+0002   1605           00028         bsf     EntradaSentido
+0003   0186           00029         clrf    PORTB                   ; Las líneas del Puerto B configuradas como salida.
+0004   1283           00030         bcf     STATUS,RP0
+0005                  00031 Principal       
+0005   0103           00032         clrw                            ; Con esta combinación se detiene el motor.
+0006   1805           00033         btfsc   EntradaMarcha           ; Comprueba el estado del interruptor de funcionamiento.
+0007   280B           00034         goto    ActivaSalida
+0008   3012           00035         movlw   b'00010010'             ; Gira en un sentido.
+0009   1A05           00036         btfsc   EntradaSentido                  ; Comprueba el sentido de giro deseado.
+000A   3011           00037         movlw   b'00010001'             ; Gira en el otro sentido.
+000B                  00038 ActivaSalida
+000B   0086           00039         movwf   PORTB
+000C   2805           00040         goto    Principal
+                      00041 
+                      00042         END
+MPASM 03.50 Released                           MOTORDC_01.ASM   10-29-2000  19:15:51         PAGE  2
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+ActivaSalida                      0000000B
+C                                 00000000
+DC                                00000001
+EEADR                             00000009
+EECON1                            00000088
+EECON2                            00000089
+EEDATA                            00000008
+EEIE                              00000006
+EEIF                              00000004
+EntradaMarcha                     PORTA,0
+EntradaSentido                    PORTA,4
+F                                 00000001
+FSR                               00000004
+GIE                               00000007
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+Inicio                            00000000
+NOT_PD                            00000003
+NOT_RBPU                          00000007
+NOT_TO                            00000004
+OPTION_REG                        00000081
+PCL                               00000002
+PCLATH                            0000000A
+PORTA                             00000005
+PORTB                             00000006
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+Principal                         00000005
+RBIE                              00000003
+RBIF                              00000000
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+STATUS                            00000003
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+TMR0                              00000001
+TRISA                             00000085
+TRISB                             00000086
+W                                 00000000
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_CP_OFF                           00003FFF
+MPASM 03.50 Released                           MOTORDC_01.ASM   10-29-2000  19:15:51         PAGE  3
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+_CP_ON                            0000000F
+_HS_OSC                           00003FFE
+_LP_OSC                           00003FFC
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC                           00003FFF
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FFD
+__16F84A                          00000001
+
+
+MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
+
+0000 : XXXXXXXXXXXXX--- ---------------- ---------------- ----------------
+2000 : -------X-------- ---------------- ---------------- ----------------
+
+All other memory blocks unused.
+
+Program Memory Words Used:    13
+Program Memory Words Free:  1011
+
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :     0 reported,     0 suppressed
+
+

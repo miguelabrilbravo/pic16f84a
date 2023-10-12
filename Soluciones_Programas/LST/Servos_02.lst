@@ -1,0 +1,246 @@
+MPASM 03.50 Released                            SERVOS_02.ASM   10-31-2003  16:18:43         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;*********************************** Servos_02.asm *************************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Programa de control del posicionamiento de un servomotor Futaba S3003. Controla el ángulo
+                      00010 ; mediante una señal cuadrada PWM de 20 ms de periodo que se aplica a su línea de control.
+                      00011 ; El ángulo es gobernado por el tiempo en alto de la señal cuadrada desde 0º (para 0,3 ms
+                      00012 ; de tiempo en alto) hasta 180º (para un tiempo en alto de 2,1 ms)
+                      00013 ;
+                      00014 ; En este programa la líneas del Puerto A controlan el ángulo de posicionamiento con una 
+                      00015 ; resolución de 10º según los valores que se indican en la siguiente tabla, tomando como
+                      00016 ; tiempo patrón 100 µs (0,1 ms) conseguidos mediante interrupciones por desbordamiento del
+                      00017 ; Timer 0.
+                      00018 ;
+                      00019 ; Entrada               FactorAlto      Tiempo Alto     Tiempo Bajo             Angulo
+                      00020 ; RA4:RA0       (3+Entrada)     0,1xFactorAlto  0,1x(200-FactorAlto)            (Grados)
+                      00021 ; ---------             -------------   --------------  ------------------              -----------
+                      00022 ;   0              3                0,3 ms                 19,7 ms                        0º
+                      00023 ;   1              4                0,4 ms                 19,6 ms                       10º
+                      00024 ;   2              5                0,5 ms                 19,5 ms                       20º
+                      00025 ;   3              6                0,6 ms                 19,4 ms                       30º
+                      00026 ;   ...           ....               ...                      ...                       ...
+                      00027 ;
+                      00028 ;   17             20               2,0 ms                 18,0 ms                      170º
+                      00029 ;   18             21               2,1 ms                17,9 ms                       180º
+                      00030 ;
+                      00031 ; A partir de una entrada superior a 18 el servo vibrará.
+                      00032 
+                      00033 ; ZONA DE DATOS **********************************************************************
+                      00034 
+2007   3FF1           00035         __CONFIG   _CP_OFF &  _WDT_OFF & _PWRTE_ON & _XT_OSC
+                      00036         LIST       P=16F84A
+                      00037         INCLUDE  <P16F84A.INC>
+                      00001         LIST
+                      00002 ; P16F84A.INC  Standard Header File, Version 2.00    Microchip Technology, Inc.
+                      00134         LIST
+                      00038 
+                      00039         CBLOCK  0x0C
+  0000000C            00040         FactorAlto                      ; Factor por el que se va a multiplicar el tiempo
+                      00041         ENDC                            ; patrón de 100 µs para obtener el tiempo en alto.
+                      00042 
+  FFFFFFA6            00043 TMR0_Carga      EQU     -d'90'          ; Valor obtenido experimentalmente con la ventana
+                      00044                                         ; Stopwatch para un tiempo de 100 µs.
+                      00045 
+                      00046 ; La próxima constante hay que variarla según el tipo de Servomotor utilizado.
+                      00047 
+  0000012C            00048 AltoCeroGrados  EQU     d'300'          ; Tiempo en alto para 0º. Para el Futaba S3003, 300 µs.
+  00000064            00049 TiempoPatron    EQU     d'100'          ; 100 µs conseguido mediante interrupciones.
+                      00050 
+MPASM 03.50 Released                            SERVOS_02.ASM   10-31-2003  16:18:43         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+  00000003            00051 FactorMinimo    EQU     AltoCeroGrados/TiempoPatron
+                      00052 
+                      00053 #DEFINE  Salida         PORTB,0         ; Línea del Puerto B donde se conecta el servomotor.
+                      00054 
+                      00055 ; ZONA DE CÓDIGOS ******************************************************************** 
+                      00056 
+0000                  00057         ORG     0
+0000   2805           00058         goto    Inicio
+0004                  00059         ORG     .4
+0004   2815           00060         goto    Timer0_Interrupcion
+0005                  00061 Inicio
+0005   1683           00062         bsf     STATUS,RP0
+0006   1006           00063         bcf     Salida                  ; Esta línea se configura como salida.
+0007   301F           00064         movlw   b'00011111'             ; Puerto A configurado como entrada.
+0008   0085           00065         movwf   PORTA
+0009   3008           00066         movlw   b'00001000'             ; TMR0 sin prescaler.
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+000A   0081           00067         movwf   OPTION_REG
+000B   1283           00068         bcf     STATUS,RP0
+000C   30A6           00069         movlw   TMR0_Carga
+000D   0081           00070         movwf   TMR0                    ; Carga el Timer 0.
+000E   30A0           00071         movlw   b'10100000'
+000F   008B           00072         movwf   INTCON                  ; Autoriza interrupción T0I y la general (GIE).
+0010                  00073 Principal
+0010   0805           00074         movf    PORTA,W         ; Lee el puerto de entrada
+0011   391F           00075         andlw   b'00011111'             ; Se queda con los bits válidos.
+0012   3E03           00076         addlw   FactorMinimo            ; Para conseguir el tiempo mínimo correspondiente a 0º.
+0013   008C           00077         movwf   FactorAlto              ; Valor entregado a la subrutina de
+0014   2810           00078         goto    Principal                       ; atención a la interrupción.
+                      00079 
+                      00080 ; Subrutina "Timer0_Interrupcion" -------------------------------------------------------
+                      00081 ;
+                      00082 ; Mantiene la salida en alto un tiempo igual a 100µs x (FactorAlto) y en bajo un tiempo igual
+                      00083 ; a 100µs x (200-FactorAlto). El periodo de la señal cuadrada lo mantiene en 20 ms.
+                      00084 ;
+                      00085         CBLOCK  
+  0000000D            00086         Guarda_W
+  0000000E            00087         Guarda_STATUS
+  0000000F            00088         Timer0_ContadorA                        ; Contador auxiliar.
+                      00089         ENDC
+                      00090 
+0015                  00091 Timer0_Interrupcion
+0015   008D           00092         movwf   Guarda_W                ; Guarda los valores de tenían W y STATUS en el
+0016   0E03           00093         swapf   STATUS,W                ; programa principal.
+0017   008E           00094         movwf   Guarda_STATUS
+0018   1283           00095         bcf     STATUS,RP0              ; Garantiza que trabaja en el Banco 0.
+0019   30A6           00096         movlw   TMR0_Carga
+001A   0081           00097         movwf   TMR0
+001B   0B8F           00098         decfsz  Timer0_ContadorA,F      ; Decrementa el contador.
+001C   2827           00099         goto    Fin_Timer0_Interrupcion
+001D   1806           00100         btfsc   Salida                  ; Testea el anterior estado de la salida.
+001E   2823           00101         goto    EstabaAlto
+001F                  00102 EstabaBajo
+MPASM 03.50 Released                            SERVOS_02.ASM   10-31-2003  16:18:43         PAGE  3
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+001F   1406           00103         bsf     Salida                  ; Estaba bajo y lo pasa a alto.
+0020   080C           00104         movf    FactorAlto,W            ; Repone el contador nuevamente con el tiempo en 
+0021   008F           00105         movwf   Timer0_ContadorA                ; alto.
+0022   2827           00106         goto    Fin_Timer0_Interrupcion
+0023                  00107 EstabaAlto
+0023   1006           00108         bcf     Salida                  ; Estaba alto y lo pasa a bajo.
+0024   080C           00109         movf    FactorAlto,W            ; Repone el contador nuevamente con el tiempo
+0025   3CC8           00110         sublw   .200                    ; en bajo.
+0026   008F           00111         movwf   Timer0_ContadorA                ; El periodo será de 100µs·200=20000µs=20ms.
+0027                  00112 Fin_Timer0_Interrupcion
+0027   0E0E           00113         swapf   Guarda_STATUS,W ; Restaura registros W y STATUS.
+0028   0083           00114         movwf   STATUS
+0029   0E8D           00115         swapf   Guarda_W,F
+002A   0E0D           00116         swapf   Guarda_W,W
+002B   100B           00117         bcf     INTCON,RBIF
+002C   110B           00118         bcf     INTCON,T0IF
+002D   0009           00119         retfie
+                      00120 
+                      00121         END
+MPASM 03.50 Released                            SERVOS_02.ASM   10-31-2003  16:18:43         PAGE  4
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+AltoCeroGrados                    0000012C
+C                                 00000000
+DC                                00000001
+EEADR                             00000009
+EECON1                            00000088
+EECON2                            00000089
+EEDATA                            00000008
+EEIE                              00000006
+EEIF                              00000004
+EstabaAlto                        00000023
+EstabaBajo                        0000001F
+F                                 00000001
+FSR                               00000004
+FactorAlto                        0000000C
+FactorMinimo                      00000003
+Fin_Timer0_Interrupcion           00000027
+GIE                               00000007
+Guarda_STATUS                     0000000E
+Guarda_W                          0000000D
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+Inicio                            00000005
+NOT_PD                            00000003
+NOT_RBPU                          00000007
+NOT_TO                            00000004
+OPTION_REG                        00000081
+PCL                               00000002
+PCLATH                            0000000A
+PORTA                             00000005
+PORTB                             00000006
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+Principal                         00000010
+RBIE                              00000003
+RBIF                              00000000
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+STATUS                            00000003
+Salida                            PORTB,0
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+TMR0                              00000001
+TMR0_Carga                        FFFFFFA6
+TRISA                             00000085
+MPASM 03.50 Released                            SERVOS_02.ASM   10-31-2003  16:18:43         PAGE  5
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+TRISB                             00000086
+TiempoPatron                      00000064
+Timer0_ContadorA                  0000000F
+Timer0_Interrupcion               00000015
+W                                 00000000
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_CP_OFF                           00003FFF
+_CP_ON                            0000000F
+_HS_OSC                           00003FFE
+_LP_OSC                           00003FFC
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC                           00003FFF
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FFD
+__16F84A                          00000001
+
+
+MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
+
+0000 : X---XXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXX-- ----------------
+2000 : -------X-------- ---------------- ---------------- ----------------
+
+All other memory blocks unused.
+
+Program Memory Words Used:    43
+Program Memory Words Free:   981
+
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :     1 reported,     0 suppressed
+
+

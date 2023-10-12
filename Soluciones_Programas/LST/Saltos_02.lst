@@ -1,0 +1,142 @@
+MPASM 03.50 Released                            SALTOS_02.ASM   10-15-2003  11:18:04         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;************************************ Saltos_02.asm *************************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Compara el dato del puerto de entrada PORTA y un "Numero" (por ejemplo el 13):
+                      00010 ;   - Si (PORTA) = Numero, se encienden todos los LEDs de salida.
+                      00011 ;   - Si (PORTA) y Numero no son iguales, se activan los LEDs pares de salida y apagan impares.
+                      00012 ;
+                      00013 ; ZONA DE DATOS **********************************************************************
+                      00014 
+2007   3FF1           00015         __CONFIG   _CP_OFF &  _WDT_OFF & _PWRTE_ON & _XT_OSC
+                      00016         LIST       P=16F84A
+                      00017         INCLUDE  <P16F84A.INC>
+                      00001         LIST
+                      00002 ; P16F84A.INC  Standard Header File, Version 2.00    Microchip Technology, Inc.
+                      00134         LIST
+                      00018 
+  0000000D            00019 Numero  EQU     d'13'                   ; Por ejemplo, este número a comparar.
+                      00020 
+                      00021 ; ZONA DE CÓDIGOS ********************************************************************
+                      00022 
+0000                  00023         ORG     0                       ; El programa comienza en la dirección 0.
+0000                  00024 Inicio
+0000   1683           00025         bsf     STATUS,RP0              ; Acceso al Banco 1.
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0001   0186           00026         clrf    TRISB                   ; Las líneas del Puerto B se configuran como salida.
+0002   301F           00027         movlw   b'00011111'             ; Las 5 líneas del Puerto A se configuran como entrada.
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0003   0085           00028         movwf   TRISA
+0004   1283           00029         bcf     STATUS,RP0              ; Acceso al Banco 0.
+0005                  00030 Principal
+0005   300D           00031         movlw   Numero                  ; Carga el número a comparar.
+0006   0205           00032         subwf   PORTA,W                 ; (W)=(PORTA)-Numero.
+0007   30FF           00033         movlw   b'11111111'             ; Supone que son iguales y por tanto va a
+                      00034                                         ; encender todos los LEDs de salida.
+0008   1D03           00035         btfss   STATUS,Z                ; ¿Z=1?, ¿(PORTA) = Numero?.
+0009   3055           00036         movlw   b'01010101'             ; No, son distintos. Se encienden pares.
+000A   0086           00037         movwf   PORTB                   ; Resultado se visualiza por el puerto de salida.
+000B   2805           00038         goto    Principal               ; Crea un bucle cerrado e infinito.
+                      00039 
+                      00040         END                             ; Fin del programa.
+MPASM 03.50 Released                            SALTOS_02.ASM   10-15-2003  11:18:04         PAGE  2
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+C                                 00000000
+DC                                00000001
+EEADR                             00000009
+EECON1                            00000088
+EECON2                            00000089
+EEDATA                            00000008
+EEIE                              00000006
+EEIF                              00000004
+F                                 00000001
+FSR                               00000004
+GIE                               00000007
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+Inicio                            00000000
+NOT_PD                            00000003
+NOT_RBPU                          00000007
+NOT_TO                            00000004
+Numero                            0000000D
+OPTION_REG                        00000081
+PCL                               00000002
+PCLATH                            0000000A
+PORTA                             00000005
+PORTB                             00000006
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+Principal                         00000005
+RBIE                              00000003
+RBIF                              00000000
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+STATUS                            00000003
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+TMR0                              00000001
+TRISA                             00000085
+TRISB                             00000086
+W                                 00000000
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_CP_OFF                           00003FFF
+_CP_ON                            0000000F
+_HS_OSC                           00003FFE
+MPASM 03.50 Released                            SALTOS_02.ASM   10-15-2003  11:18:04         PAGE  3
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+_LP_OSC                           00003FFC
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC                           00003FFF
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FFD
+__16F84A                          00000001
+
+
+MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
+
+0000 : XXXXXXXXXXXX---- ---------------- ---------------- ----------------
+2000 : -------X-------- ---------------- ---------------- ----------------
+
+All other memory blocks unused.
+
+Program Memory Words Used:    12
+Program Memory Words Free:  1012
+
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :     2 reported,     0 suppressed
+
+

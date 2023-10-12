@@ -1,0 +1,3 @@
+Error[131]   E:\00.-MPLAB\00.-PIC16F84A\ELEMENTAL_10\ELEMENTAL_10.ASM 18 : Processor type is undefined
+Message[302] E:\00.-MPLAB\00.-PIC16F84A\ELEMENTAL_10\ELEMENTAL_10.ASM 28 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] E:\00.-MPLAB\00.-PIC16F84A\ELEMENTAL_10\ELEMENTAL_10.ASM 30 : Register in operand not in bank 0.  Ensure that bank bits are correct.

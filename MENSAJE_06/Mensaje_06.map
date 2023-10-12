@@ -1,0 +1,216 @@
+MPLINK 4.49, Linker
+Linker Map File - Created Sun Jun 11 21:00:55 2023
+
+                                 Section Info
+                  Section       Type    Address   Location Size(Bytes)
+                ---------  ---------  ---------  ---------  ---------
+                   .org_0       code   0x000000    program   0x000000
+                   .org_1       code   0x000000    program   0x0002c6
+.config_2007_MENSAJE_06.O       code   0x002007    program   0x000002
+
+
+
+                              Program Memory Usage 
+                               Start         End      
+                           ---------   ---------      
+                            0x000000    0x000162      
+                            0x002007    0x002007      
+            356 out of 1094 program addresses used, program memory utilization is 32%
+
+
+
+                              Symbols - Sorted by Name
+                     Name    Address   Location    Storage File                     
+                ---------  ---------  ---------  --------- ---------                
+            ApuntaMensaje   0x000021    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\Mensaje_06.asm
+   BCD_IncrementaCentenas   0x00015d    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\BIN_BCD.INC
+    BCD_IncrementaDecenas   0x000157    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\BIN_BCD.INC
+              BCD_Resta10   0x000153    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\BIN_BCD.INC
+              BIN_BCD_Fin   0x000160    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\BIN_BCD.INC
+                BIN_a_BCD   0x000150    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\BIN_BCD.INC
+         EsperaDejePulsar   0x00000d    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\Mensaje_06.asm
+                      Fin   0x00000f    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\Mensaje_06.asm
+       IncrementaContador   0x000010    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\Mensaje_06.asm
+                   Inicio   0x000000    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\Mensaje_06.asm
+      LCD_2Lineas4Bits5x7   0x0000c3    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+                LCD_Borra   0x0000c1    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+                 LCD_Byte   0x0000f3    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+         LCD_ByteCompleto   0x0000fa    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+             LCD_Caracter   0x0000c6    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+          LCD_CodigoCGROM   0x0000d0    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+           LCD_CursorIncr   0x0000b1    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+            LCD_CursorOFF   0x0000bf    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+             LCD_CursorON   0x0000bd    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+   LCD_DosEspaciosBlancos   0x0000ea    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+        LCD_EnheMayuscula   0x0000d7    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+        LCD_EnheMinuscula   0x0000d1    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+                LCD_Envia   0x0000c8    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+         LCD_EnviaBlancos   0x0000ed    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+       LCD_EnviaByteLetra   0x000106    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+         LCD_EnviaComando   0x0000c4    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+      LCD_EnviaOtroBlanco   0x0000ee    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+         LCD_EsFinalLinea   0x000072    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_MENS.INC
+           LCD_EscribeLCD   0x00009a    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+             LCD_FinCGROM   0x0000e4    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+           LCD_FinMensaje   0x000067    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_MENS.INC
+        LCD_FinMovimiento   0x000081    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_MENS.INC
+   LCD_FinVisualizaDigito   0x000108    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+                LCD_Grado   0x0000de    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+           LCD_Inicializa   0x000082    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+               LCD_Linea1   0x0000b3    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+               LCD_Linea2   0x0000b5    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+        LCD_LineaEnBlanco   0x0000e6    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+              LCD_Mensaje   0x00005a    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_MENS.INC
+    LCD_MensajeMovimiento   0x000068    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_MENS.INC
+               LCD_Nibble   0x0000fe    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+       LCD_NoEsFinalLinea   0x000077    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_MENS.INC
+     LCD_NoUltimoCaracter   0x000064    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_MENS.INC
+    LCD_NoUltimoCaracter2   0x00007d    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_MENS.INC
+                  LCD_OFF   0x0000bb    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+       LCD_PosicionLinea1   0x0000b7    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+       LCD_PosicionLinea2   0x0000b9    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+      LCD_PrimeraPosicion   0x00006c    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_MENS.INC
+  LCD_TresEspaciosBlancos   0x0000ec    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+      LCD_UnEspacioBlanco   0x0000e8    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+        LCD_VisualizaAlto   0x0000fb    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+        LCD_VisualizaBajo   0x0000fd    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+    LCD_VisualizaCaracter   0x00006e    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_MENS.INC
+LCD_VisualizaOtroCaracter   0x00005e    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_MENS.INC
+                 Mensaje0   0x000026    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\Mensaje_06.asm
+                 Mensaje1   0x000034    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\Mensaje_06.asm
+                 Mensaje2   0x000045    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\Mensaje_06.asm
+                 MensajeN   0x00004e    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\Mensaje_06.asm
+                 Mensajes   0x000025    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\Mensaje_06.asm
+                Principal   0x000006    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\Mensaje_06.asm
+    R1Decima_BucleExterno   0x000146    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+   R1Decima_BucleExterno2   0x000144    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+    R1Decima_BucleInterno   0x000148    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+        R1ms_BucleExterno   0x000130    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+        R1ms_BucleInterno   0x000132    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+            RetardoMicros   0x00011c    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+        Retardo_100micros   0x000116    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+            Retardo_100ms   0x000122    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+         Retardo_10micros   0x000109    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+             Retardo_10ms   0x000128    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+              Retardo_10s   0x00013a    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+          Retardo_1Decima   0x000143    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+              Retardo_1ms   0x00012e    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+               Retardo_1s   0x000140    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+        Retardo_200micros   0x000113    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+            Retardo_200ms   0x000120    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+         Retardo_20micros   0x00011b    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+             Retardo_20ms   0x000126    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+              Retardo_20s   0x000138    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+              Retardo_2ms   0x00012c    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+               Retardo_2s   0x00013e    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+          Retardo_4micros   0x00010f    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+        Retardo_500micros   0x000110    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+            Retardo_500ms   0x000142    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+         Retardo_50micros   0x000118    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+             Retardo_50ms   0x000124    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+          Retardo_5micros   0x00010e    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+              Retardo_5ms   0x00012a    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+               Retardo_5s   0x00013c    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+              Retardos_ms   0x00012f    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+            Rmicros_Bucle   0x00011d    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+                Visualiza   0x000016    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\Mensaje_06.asm
+
+
+
+                              Symbols - Sorted by Address
+                     Name    Address   Location    Storage File                     
+                ---------  ---------  ---------  --------- ---------                
+                   Inicio   0x000000    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\Mensaje_06.asm
+                Principal   0x000006    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\Mensaje_06.asm
+         EsperaDejePulsar   0x00000d    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\Mensaje_06.asm
+                      Fin   0x00000f    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\Mensaje_06.asm
+       IncrementaContador   0x000010    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\Mensaje_06.asm
+                Visualiza   0x000016    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\Mensaje_06.asm
+            ApuntaMensaje   0x000021    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\Mensaje_06.asm
+                 Mensajes   0x000025    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\Mensaje_06.asm
+                 Mensaje0   0x000026    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\Mensaje_06.asm
+                 Mensaje1   0x000034    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\Mensaje_06.asm
+                 Mensaje2   0x000045    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\Mensaje_06.asm
+                 MensajeN   0x00004e    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\Mensaje_06.asm
+              LCD_Mensaje   0x00005a    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_MENS.INC
+LCD_VisualizaOtroCaracter   0x00005e    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_MENS.INC
+     LCD_NoUltimoCaracter   0x000064    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_MENS.INC
+           LCD_FinMensaje   0x000067    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_MENS.INC
+    LCD_MensajeMovimiento   0x000068    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_MENS.INC
+      LCD_PrimeraPosicion   0x00006c    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_MENS.INC
+    LCD_VisualizaCaracter   0x00006e    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_MENS.INC
+         LCD_EsFinalLinea   0x000072    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_MENS.INC
+       LCD_NoEsFinalLinea   0x000077    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_MENS.INC
+    LCD_NoUltimoCaracter2   0x00007d    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_MENS.INC
+        LCD_FinMovimiento   0x000081    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_MENS.INC
+           LCD_Inicializa   0x000082    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+           LCD_EscribeLCD   0x00009a    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+           LCD_CursorIncr   0x0000b1    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+               LCD_Linea1   0x0000b3    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+               LCD_Linea2   0x0000b5    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+       LCD_PosicionLinea1   0x0000b7    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+       LCD_PosicionLinea2   0x0000b9    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+                  LCD_OFF   0x0000bb    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+             LCD_CursorON   0x0000bd    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+            LCD_CursorOFF   0x0000bf    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+                LCD_Borra   0x0000c1    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+      LCD_2Lineas4Bits5x7   0x0000c3    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+         LCD_EnviaComando   0x0000c4    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+             LCD_Caracter   0x0000c6    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+                LCD_Envia   0x0000c8    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+          LCD_CodigoCGROM   0x0000d0    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+        LCD_EnheMinuscula   0x0000d1    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+        LCD_EnheMayuscula   0x0000d7    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+                LCD_Grado   0x0000de    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+             LCD_FinCGROM   0x0000e4    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+        LCD_LineaEnBlanco   0x0000e6    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+      LCD_UnEspacioBlanco   0x0000e8    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+   LCD_DosEspaciosBlancos   0x0000ea    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+  LCD_TresEspaciosBlancos   0x0000ec    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+         LCD_EnviaBlancos   0x0000ed    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+      LCD_EnviaOtroBlanco   0x0000ee    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+                 LCD_Byte   0x0000f3    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+         LCD_ByteCompleto   0x0000fa    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+        LCD_VisualizaAlto   0x0000fb    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+        LCD_VisualizaBajo   0x0000fd    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+               LCD_Nibble   0x0000fe    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+       LCD_EnviaByteLetra   0x000106    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+   LCD_FinVisualizaDigito   0x000108    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\LCD_4BIT.INC
+         Retardo_10micros   0x000109    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+          Retardo_5micros   0x00010e    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+          Retardo_4micros   0x00010f    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+        Retardo_500micros   0x000110    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+        Retardo_200micros   0x000113    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+        Retardo_100micros   0x000116    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+         Retardo_50micros   0x000118    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+         Retardo_20micros   0x00011b    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+            RetardoMicros   0x00011c    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+            Rmicros_Bucle   0x00011d    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+            Retardo_200ms   0x000120    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+            Retardo_100ms   0x000122    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+             Retardo_50ms   0x000124    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+             Retardo_20ms   0x000126    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+             Retardo_10ms   0x000128    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+              Retardo_5ms   0x00012a    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+              Retardo_2ms   0x00012c    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+              Retardo_1ms   0x00012e    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+              Retardos_ms   0x00012f    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+        R1ms_BucleExterno   0x000130    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+        R1ms_BucleInterno   0x000132    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+              Retardo_20s   0x000138    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+              Retardo_10s   0x00013a    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+               Retardo_5s   0x00013c    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+               Retardo_2s   0x00013e    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+               Retardo_1s   0x000140    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+            Retardo_500ms   0x000142    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+          Retardo_1Decima   0x000143    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+   R1Decima_BucleExterno2   0x000144    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+    R1Decima_BucleExterno   0x000146    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+    R1Decima_BucleInterno   0x000148    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\RETARDOS.INC
+                BIN_a_BCD   0x000150    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\BIN_BCD.INC
+              BCD_Resta10   0x000153    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\BIN_BCD.INC
+    BCD_IncrementaDecenas   0x000157    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\BIN_BCD.INC
+   BCD_IncrementaCentenas   0x00015d    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\BIN_BCD.INC
+              BIN_BCD_Fin   0x000160    program     static E:\00.-MPLAB\00.-PIC16F84A\MENSAJE_06\BIN_BCD.INC
+
+

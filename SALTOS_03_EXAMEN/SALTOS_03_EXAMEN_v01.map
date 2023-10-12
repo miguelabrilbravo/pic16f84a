@@ -1,0 +1,36 @@
+MPLINK 4.49, Linker
+Linker Map File - Created Sun Jun 25 19:46:46 2023
+
+                                 Section Info
+                  Section       Type    Address   Location Size(Bytes)
+                ---------  ---------  ---------  ---------  ---------
+                   .org_0       code   0x000000    program   0x000000
+                   .org_1       code   0x000000    program   0x000016
+.config_2007_SALTOS_03_EXAMEN_V01.O       code   0x002007    program   0x000002
+
+
+
+                              Program Memory Usage 
+                               Start         End      
+                           ---------   ---------      
+                            0x000000    0x00000a      
+                            0x002007    0x002007      
+            12 out of 1094 program addresses used, program memory utilization is 1%
+
+
+
+                              Symbols - Sorted by Name
+                     Name    Address   Location    Storage File                     
+                ---------  ---------  ---------  --------- ---------                
+                   Inicio   0x000000    program     static E:\00.-MPLAB\00.-PIC16F84A\SALTOS_03_EXAMEN\SALTOS_03_EXAMEN_v01.asm
+                Principal   0x000005    program     static E:\00.-MPLAB\00.-PIC16F84A\SALTOS_03_EXAMEN\SALTOS_03_EXAMEN_v01.asm
+
+
+
+                              Symbols - Sorted by Address
+                     Name    Address   Location    Storage File                     
+                ---------  ---------  ---------  --------- ---------                
+                   Inicio   0x000000    program     static E:\00.-MPLAB\00.-PIC16F84A\SALTOS_03_EXAMEN\SALTOS_03_EXAMEN_v01.asm
+                Principal   0x000005    program     static E:\00.-MPLAB\00.-PIC16F84A\SALTOS_03_EXAMEN\SALTOS_03_EXAMEN_v01.asm
+
+

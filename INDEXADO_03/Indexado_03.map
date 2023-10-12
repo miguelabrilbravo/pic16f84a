@@ -1,0 +1,40 @@
+MPLINK 4.49, Linker
+Linker Map File - Created Thu Jun 08 21:17:23 2023
+
+                                 Section Info
+                  Section       Type    Address   Location Size(Bytes)
+                ---------  ---------  ---------  ---------  ---------
+                   .org_0       code   0x000000    program   0x000000
+                   .org_1       code   0x000000    program   0x000006
+                   .org_2       code   0x0000fe    program   0x000008
+
+
+
+                              Program Memory Usage 
+                               Start         End      
+                           ---------   ---------      
+                            0x000000    0x000002      
+                            0x0000fe    0x000101      
+            7 out of 1094 program addresses used, program memory utilization is 0%
+
+
+
+                              Symbols - Sorted by Name
+                     Name    Address   Location    Storage File                     
+                ---------  ---------  ---------  --------- ---------                
+           Configuracion0   0x000102    program     static E:\00.-MPLAB\00.-PIC16F84A\INDEXADO_03\Indexado_03.asm
+           Configuracion1   0x000102    program     static E:\00.-MPLAB\00.-PIC16F84A\INDEXADO_03\Indexado_03.asm
+                   Inicio   0x000000    program     static E:\00.-MPLAB\00.-PIC16F84A\INDEXADO_03\Indexado_03.asm
+                Principal   0x0000fe    program     static E:\00.-MPLAB\00.-PIC16F84A\INDEXADO_03\Indexado_03.asm
+
+
+
+                              Symbols - Sorted by Address
+                     Name    Address   Location    Storage File                     
+                ---------  ---------  ---------  --------- ---------                
+                   Inicio   0x000000    program     static E:\00.-MPLAB\00.-PIC16F84A\INDEXADO_03\Indexado_03.asm
+                Principal   0x0000fe    program     static E:\00.-MPLAB\00.-PIC16F84A\INDEXADO_03\Indexado_03.asm
+           Configuracion0   0x000102    program     static E:\00.-MPLAB\00.-PIC16F84A\INDEXADO_03\Indexado_03.asm
+           Configuracion1   0x000102    program     static E:\00.-MPLAB\00.-PIC16F84A\INDEXADO_03\Indexado_03.asm
+
+

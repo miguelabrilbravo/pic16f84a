@@ -1,0 +1,1180 @@
+MPASM 03.50 Released                        I2C_EEPROM_02.ASM   10-26-2003  14:14:53         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;************************************ I2C_EEPROM_02.asm *******************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Lee un mensaje almacenado en la memoria 24LC256 y lo visualiza por la pantalla del módulo
+                      00010 ; LCD desplazándose hacia la izquierda.
+                      00011 ; El mensaje tiene que haber sido grabado previamente mediante el IC-Prog o un software similar.
+                      00012 ; También se puede grabar mediante el procedimiento explicado en el programa I2C_EEPROM_01.asm.
+                      00013 ;
+                      00014 ; ZONA DE DATOS **********************************************************************
+                      00015 
+2007   3FF1           00016         __CONFIG   _CP_OFF &  _WDT_OFF & _PWRTE_ON & _XT_OSC
+                      00017         LIST       P=16F84A
+                      00018         INCLUDE  <P16F84A.INC>
+                      00001         LIST
+                      00002 ; P16F84A.INC  Standard Header File, Version 2.00    Microchip Technology, Inc.
+                      00134         LIST
+                      00019 
+                      00020         CBLOCK  0x0C
+                      00021         ENDC
+                      00022 
+  00000000            00023 Pagina  EQU     0x00
+                      00024                 
+                      00025 ; ZONA DE CÓDIGOS ********************************************************************
+                      00026 
+0000                  00027         ORG     0
+0000                  00028 Inicio
+0000   20D6           00029         call    LCD_Inicializa
+0001                  00030 Principal
+0001   3000           00031         movlw   Pagina                  ; Lee a partir de la dirección 0 de esta página
+0002   2075           00032         call    M24LC256_Mensaje_a_LCD  ; de la memoria.
+0003   20C6           00033         call    Retardo_1s
+0004   2801           00034         goto    Principal
+                      00035 
+                      00036         INCLUDE  <BUS_I2C.INC>          ; Subrutinas de control del bus I2C.
+                      00001 ;**************************** Librería "BUS_I2C.INC" ************************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Estas subrutinas permiten realizar las tareas básicas de control del bus serie I2C, 
+                      00010 ; por parte de un solo microcontrolador maestro.
+                      00011 ;
+                      00012 ; ZONA DE DATOS **********************************************************************
+                      00013 ;
+                      00014         CBLOCK
+MPASM 03.50 Released                        I2C_EEPROM_02.ASM   10-26-2003  14:14:53         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+  0000000C            00015         I2C_ContadorBits                ; Cuenta los bits a transmitir o a recibir.
+  0000000D            00016         I2C_Dato                        ; Dato a transmitir o recibido.
+  0000000E            00017         I2C_Flags                       ; Guarda la información del estado del bus I2C.
+                      00018         ENDC
+                      00019 
+                      00020 #DEFINE I2C_UltimoByteLeer      I2C_Flags,0
+                      00021 ;    -  (I2C_UltimoByteLeer)=0, NO es el último byte a leer por el maestro.
+                      00022 ;    -  (I2C_UltimoByteLeer)=1, SÍ es el último byte a leer por el maestro.
+                      00023 
+                      00024 ; La definición de las líneas SCL y SDA del bus I2C se puede cambiar según las
+                      00025 ; necesidades del hardware.
+                      00026 
+                      00027 #DEFINE SCL     PORTA,3                 ; Línea SCL del bus I2C.
+                      00028 #DEFINE SDA     PORTA,4                 ; Línea SDA del bus I2C.
+                      00029 ;
+                      00030 ; Subrutina "SDA_Bajo" -------------------------------------------------------------------------------
+                      00031 ;
+0005                  00032 SDA_Bajo
+0005   1683           00033         bsf     STATUS,RP0              ; Configura la línea SDA como salida.
+0006   1205           00034         bcf     SDA
+0007   1283           00035         bcf     STATUS,RP0
+0008   1205           00036         bcf     SDA                     ; SDA en bajo.
+0009   0008           00037         return
+                      00038 ;
+                      00039 ; Subrutina "SDA_AltaImpedancia" --------------------------------------------------------
+                      00040 ;
+000A                  00041 SDA_AltaImpedancia
+000A   1683           00042         bsf     STATUS,RP0              ; Configura la línea SDA entrada.
+000B   1605           00043         bsf     SDA                     ; Lo pone en alta impedancia y, gracias a la
+000C   1283           00044         bcf     STATUS,RP0              ; Rp de esta línea, se mantiene a nivel alto.
+000D   0008           00045         return
+                      00046 ;
+                      00047 ; Subrutina "SCL_Bajo" ------------------------------------------------------------------
+                      00048 ;
+000E                  00049 SCL_Bajo
+000E   1683           00050         bsf     STATUS,RP0
+000F   1185           00051         bcf     SCL                     ; Configura la línea SCL como salida.
+0010   1283           00052         bcf     STATUS,RP0
+0011   1185           00053         bcf     SCL                     ; La línea de reloj SCL en bajo.
+0012   0008           00054         return
+                      00055 ;
+                      00056 ; Subrutina "SCL_AltaImpedancia" --------------------------------------------------------
+                      00057 ;
+0013                  00058 SCL_AltaImpedancia
+0013   1683           00059         bsf     STATUS,RP0              ; Configura la línea SCL entrada.
+0014   1585           00060         bsf     SCL                     ; Lo pone en alta impedancia y, gracias a la Rp
+0015   1283           00061         bcf     STATUS,RP0              ; de esta línea, se mantiene a nivel alto.
+0016                  00062 SCL_EsperaNivelAlto
+0016   1D85           00063         btfss   SCL                     ; Si algún esclavo mantiene esta línea en bajo
+0017   2816           00064         goto    SCL_EsperaNivelAlto     ; hay que esperar.
+0018   0008           00065         return
+                      00066 ;
+                      00067 ; Subrutina "I2C_EnviaStart" ------------------------------------------------------------
+MPASM 03.50 Released                        I2C_EEPROM_02.ASM   10-26-2003  14:14:53         PAGE  3
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00068 ;
+                      00069 ; Esta subrutina envía una condición de Start o inicio.
+                      00070 ;
+0019                  00071 I2C_EnviaStart
+0019   200A           00072         call    SDA_AltaImpedancia      ; Línea SDA en alto.
+001A   2013           00073         call    SCL_AltaImpedancia      ; Línea SCL en alto.
+001B   2095           00074         call    Retardo_4micros         ; Tiempo tBUF del protocolo.
+001C   2005           00075         call    SDA_Bajo                ; Flanco de bajada de SDA mientras SCL está alto.
+001D   2095           00076         call    Retardo_4micros         ; Tiempo tHD;STA del protocolo.
+001E   200E           00077         call    SCL_Bajo                ; Flanco de bajada del reloj SCL.
+001F   2095           00078         call    Retardo_4micros 
+0020   0008           00079         return
+                      00080 ;
+                      00081 ; Subrutina "I2C_EnviaStop" -------------------------------------------------------------
+                      00082 ;
+                      00083 ; Esta subrutina envía un condición de Stop o parada.
+                      00084 ;
+0021                  00085 I2C_EnviaStop
+0021   2005           00086         call    SDA_Bajo
+0022   2013           00087         call    SCL_AltaImpedancia      ; Flanco de subida de SCL.
+0023   2095           00088         call    Retardo_4micros         ; Tiempo tSU;STO del protocolo.
+0024   200A           00089         call    SDA_AltaImpedancia      ; Flanco de subida de SDA.
+0025   2095           00090         call    Retardo_4micros         ; Tiempo tBUF del protocolo.
+0026   0008           00091         return
+                      00092 ;
+                      00093 ; Subrutina "I2C_EnviaByte" -------------------------------------------------------------
+                      00094 ;
+                      00095 ; El microcontrolador maestro transmite un byte por el bus I2C, comenzando por el bit
+                      00096 ; MSB. El byte a transmitir debe estar cargado previamente en el registro de trabajo W.
+                      00097 ; De la subrutina ejecutada anteriormente I2C_EnviaStart o esta misma I2C_EnviaByte, 
+                      00098 ; la línea SCL se debe encontrar a nivel bajo al menos durante 5 µs.
+                      00099 ;
+0027                  00100 I2C_EnviaByte
+0027   008D           00101         movwf   I2C_Dato                        ; Almacena el byte a transmitir.
+0028   3008           00102         movlw   0x08                    ; A transmitir 8 bits.
+0029   008C           00103         movwf   I2C_ContadorBits
+002A                  00104 I2C_EnviaBit
+002A   0D8D           00105         rlf     I2C_Dato,F              ; Chequea el bit, llevándolo previamente al Carry.
+002B   1803           00106         btfsc   STATUS,C
+002C   282F           00107         goto    I2C_EnviaUno
+002D                  00108 I2C_EnviaCero
+002D   2005           00109         call    SDA_Bajo                ; Si es "0" envía un nivel bajo.
+002E   2830           00110         goto    I2C_FlancoSCL
+002F                  00111 I2C_EnviaUno
+002F   200A           00112         call    SDA_AltaImpedancia      ; Si es "1" lo activará a alto.
+0030                  00113 I2C_FlancoSCL
+0030   2013           00114         call    SCL_AltaImpedancia      ; Flanco de subida del SCL.
+0031   2095           00115         call    Retardo_4micros         ; Tiempo tHIGH del protocolo.
+0032   200E           00116         call    SCL_Bajo                ; Termina el semiperiodo positivo del reloj.
+0033   2095           00117         call    Retardo_4micros         ; Tiempo tHD;DAT del protocolo.
+0034   0B8C           00118         decfsz  I2C_ContadorBits,F              ; Lazo para los ocho bits.
+0035   282A           00119         goto    I2C_EnviaBit
+                      00120 ;
+MPASM 03.50 Released                        I2C_EEPROM_02.ASM   10-26-2003  14:14:53         PAGE  4
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0036   200A           00121         call    SDA_AltaImpedancia      ; Libera la línea de datos.
+0037   2013           00122         call    SCL_AltaImpedancia      ; Pulso en alto de reloj para que el esclavo
+0038   2095           00123         call    Retardo_4micros         ; pueda enviar el bit ACK.
+0039   200E           00124         call    SCL_Bajo
+003A   2095           00125         call    Retardo_4micros
+003B   0008           00126         return
+                      00127 ;
+                      00128 ; Subrutina "I2C_LeeByte" ---------------------------------------------------------------
+                      00129 ;
+                      00130 ; El microcontrolador maestro lee un byte desde el esclavo conectado al bus I2C. El dato
+                      00131 ; recibido se carga en el registro I2C_Dato y lo envía a la subrutina superior a través
+                      00132 ; del registro W. Se empieza a leer por el bit de mayor peso MSB.
+                      00133 ; De alguna de las subrutinas ejecutadas anteriormente I2C_EnviaStart, I2C_EnviaByte
+                      00134 ; o esta misma I2C_LeeByte, la línea SCL lleva en bajo al menos 5 µs.
+                      00135 
+003C                  00136 I2C_LeeByte
+003C   3008           00137         movlw   0x08                    ; A recibir 8 bits.
+003D   008C           00138         movwf   I2C_ContadorBits
+003E   200A           00139         call    SDA_AltaImpedancia      ; Deja libre la línea de datos.
+003F                  00140 I2C_LeeBit
+003F   2013           00141         call    SCL_AltaImpedancia      ; Flanco de subida del reloj.
+0040   1003           00142         bcf     STATUS,C                ; En principio supone que es "0".
+0041   1A05           00143         btfsc   SDA                     ; Lee el bit
+0042   1403           00144         bsf     STATUS,C                ; Si es "1" carga 1 en el Carry.
+0043   0D8D           00145         rlf     I2C_Dato,F              ; Lo introduce en el registro.
+0044   200E           00146         call    SCL_Bajo                ; Termina el semiperiodo positivo del reloj.
+0045   2095           00147         call    Retardo_4micros         ; Tiempo tHD;DAT del protocolo.
+0046   0B8C           00148         decfsz  I2C_ContadorBits,F              ; Lazo para los 8 bits.
+0047   283F           00149         goto    I2C_LeeBit
+                      00150 ;
+                      00151 ; Chequea si este es el último byte a leer para enviar o no el bit de reconocimiento
+                      00152 ; ACK en consecuencia.
+                      00153 ;
+0048   1C0E           00154         btfss   I2C_UltimoByteLeer      ; Si es el último, no debe enviar
+                      00155                                         ; el bit de reconocimiento ACK.
+0049   2005           00156         call    SDA_Bajo                ; Envía el bit de reconocimiento ACK
+                      00157                                         ; porque todavía no es el último byte a leer.
+004A   2013           00158         call    SCL_AltaImpedancia      ; Pulso en alto del SCL para transmitir el
+004B   2095           00159         call    Retardo_4micros         ; bit ACK de reconocimiento. Este es tHIGH.
+004C   200E           00160         call    SCL_Bajo                ; Pulso de bajada del SCL.
+004D   2095           00161         call    Retardo_4micros
+004E   080D           00162         movf    I2C_Dato,W              ; El resultado se manda en el registro de
+004F   0008           00163         return                          ; de trabajo W.
+                      00164         
+                      00165 ;       ===================================================================
+                      00166 ;         Del libro "MICROCONTROLADOR PIC16F84. DESARROLLO DE PROYECTOS"
+                      00167 ;         E. Palacios, F. Remiro y L. López.
+                      00168 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00169 ;       ===================================================================
+                      00037         INCLUDE  <M24LC256.INC> ; Subrutinas de control de la memoria 24LC256.
+                      00001 ;**************************** Librería "M24LC256.INC" ***********************************
+                      00002 ;
+                      00003 ;       ===================================================================
+MPASM 03.50 Released                        I2C_EEPROM_02.ASM   10-26-2003  14:14:53         PAGE  5
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Estas subrutinas permiten realizar las tareas de manejo de la memoria EEPROM serie
+                      00010 ; 24LC256 que transmite y recibe la información vía serie a través de un bus I2C.
+                      00011 ;
+                      00012 ; Subrutina "M24LC256_InicializaEscritura" ----------------------------------------------
+                      00013 ;
+                      00014 ; Prepara la memoria para iniciar su escritura a partir de la posición de memoria fijada
+                      00015 ; por los registros:
+                      00016 ; - (M24LC256_AddressHigh), indica el número del bloque o página de memoria a escribir.
+                      00017 ; - (M24LC256_AddressLow), indica posición a escribir dentro del bloque.
+                      00018 
+                      00019         CBLOCK
+  0000000F            00020         M24LC256_AddressHigh            ; Guarda el valor de la dirección de memoria a 
+  00000010            00021         M24LC256_AddressLow             ; escribir o leer.
+  00000011            00022         M24LC256_Dato
+                      00023         ENDC
+                      00024 ;
+  000000A0            00025 M24LC256_DireccionEscritura      EQU    b'10100000'; Dirección de la memoria 24LC256 para
+  000000A1            00026 M24LC256_DireccionLectura        EQU    b'10100001'; escritura y lectura respectivamente.
+                      00027 
+0050                  00028 M24LC256_InicializaEscritura
+0050   2019           00029         call    I2C_EnviaStart          ; Envía condición de Start.
+0051   30A0           00030         movlw   M24LC256_DireccionEscritura; Envía dirección de escritura del 
+0052   2027           00031         call    I2C_EnviaByte           ; esclavo.
+0053   080F           00032         movf    M24LC256_AddressHigh,W  ; A partir de la dirección apuntada por los 
+0054   2027           00033         call    I2C_EnviaByte           ; registros M24LC256_AddressHigh y
+0055   0810           00034         movf    M24LC256_AddressLow,W   ; M24LC256_AddressLow.
+0056   2027           00035         call    I2C_EnviaByte
+0057   0008           00036         return  
+                      00037 
+                      00038 ; Subrutina "M24LC256_InicializaLectura" ------------------------------------------------
+                      00039 ;
+                      00040 ; Prepara la memoria para iniciar su lectura a partir de la posición de memoria fijada
+                      00041 ; por los registros:
+                      00042 ; - (M24LC256_AddressHigh), indica el número del bloque o página de memoria a leer.
+                      00043 ; - (M24LC256_AddressLow), indica posición a escribir dentro del bloque.
+                      00044 
+0058                  00045 M24LC256_InicializaLectura
+0058   100E           00046         bcf     I2C_UltimoByteLeer      ; Todavía no ha comenzado a leer ningún dato.
+0059   2019           00047         call    I2C_EnviaStart          ; Envía condición de Start.
+005A   30A0           00048         movlw   M24LC256_DireccionEscritura; Envía dirección de escritura del 
+005B   2027           00049         call    I2C_EnviaByte           ; esclavo.
+005C   080F           00050         movf    M24LC256_AddressHigh,W  ; A partir de la dirección apuntada por los 
+005D   2027           00051         call    I2C_EnviaByte           ; registros M24LC256_AddressHigh y
+005E   0810           00052         movf    M24LC256_AddressLow,W   ; M24LC256_AddressLow.
+005F   2027           00053         call    I2C_EnviaByte
+0060   2021           00054         call    I2C_EnviaStop
+                      00055 ;
+0061   2019           00056         call    I2C_EnviaStart          ; Envía condición de Start.
+MPASM 03.50 Released                        I2C_EEPROM_02.ASM   10-26-2003  14:14:53         PAGE  6
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0062   30A1           00057         movlw   M24LC256_DireccionLectura       ; Indica a la memoria 24LC256 que va a 
+0063   2027           00058         call    I2C_EnviaByte           ; proceder a la lectura.
+0064   0008           00059         return
+                      00060 
+                      00061 ; Subrutina "M24LC256_Mensaje_a_LCD" ----------------------------------------------------
+                      00062 ;
+                      00063 ; Lee el mensaje grabado en la memoria 24LC256 y lo visualiza en la pantalla del módulo LCD.
+                      00064 ; En el registro de trabajo W se introduce la página de la memoria a partir de cuya primera
+                      00065 ; posición se va a leer. La lectura termina cuando encuentre el código 0x00. Así por ejemplo,
+                      00066 ; si (W)=2Fh lee el mensaje que comienza en la posición 0 de la página 2Fh de la memoria,
+                      00067 ; que es la posición 2F00h absoluta. 
+                      00068 ; 
+                      00069         CBLOCK
+                      00070 ;       M24LC256_ValorCaracter          ; Valor ASCII del carácter leído.
+                      00071         ENDC
+                      00072 
+                      00073 ;M24LC256_Mensaje_a_LCD
+0065   008F           00074         movwf   M24LC256_AddressHigh    ; Apunta al inicio de la página correspondiente.
+0066   0190           00075         clrf    M24LC256_AddressLow
+0067   2058           00076         call    M24LC256_InicializaLectura
+0068                  00077 M24LC256_LeeOtroByte
+0068   203C           00078         call    I2C_LeeByte             ; Lee la memoria 24LC256.
+0069   0092           00079         movwf   M24LC256_ValorCaracter  ; Guarda el valor de carácter.
+006A   0892           00080         movf    M24LC256_ValorCaracter,F        ; Lo único que hace es posicionar flag Z. En caso
+006B   1903           00081         btfsc   STATUS,Z                ; que sea "0x00", que es código indicador final 
+006C   288D           00082         goto    M24LC256_FinMensaje     ; del mensaje, sale de la subrutina.
+006D   0812           00083         movf    M24LC256_ValorCaracter,W        ; Recupera el valor leído.
+006E   2117           00084         call    LCD_Caracter            ; Lo visualiza en la pantalla del LCD.
+006F   0A90           00085         incf    M24LC256_AddressLow,F   ; Apunta a la siguiente posición.
+0070   2868           00086         goto    M24LC256_LeeOtroByte
+                      00087 ;M24LC256_FinMensaje
+                      00088 ;       call    M24LC_256_FinalizaLectura
+                      00089 ;       return
+                      00090 
+                      00091 ; Subrutina "M24LC256_FinalizaLectura" ------------------------------------------------
+                      00092 ;
+                      00093 ; Activa el bit I2C_UltimoByteLeer para que la subrutina I2C_LeeByte ponga en alta
+                      00094 ; impedancia la línea SDA y pueda ejecutarse posteriormente la condición de Start o Stop
+                      00095 ; que fija el protocolo del bus I2C.
+                      00096 
+0071                  00097 M24LC256_FinalizaLectura
+0071   140E           00098         bsf     I2C_UltimoByteLeer      ; Con estas dos instrucciones se pone en 
+0072   203C           00099         call    I2C_LeeByte             ; alta impedancia la línea SDA. No importa el
+0073   2021           00100         call    I2C_EnviaStop           ; resultado de la lectura realizada.
+0074   0008           00101         return
+                      00102 
+                      00103 ; Subrutina "M24LC256_Mensaje_a_LCD" ----------------------------------------------------
+                      00104 ;
+                      00105 ; Lee un mensaje grabado en la memoria 24LC256 y lo visualiza por el módulo LCD. En caso que
+                      00106 ; sea más largo que la longitud de la pantalla se desplaza hacia la izquierda con sensación
+                      00107 ; de movimiento. En el registro de trabajo W se introduce la página de la memoria a partir
+                      00108 ; de cuya primera posición va a leer. La visualización termina cuando encuentre el código
+                      00109 ; 0x00. Así por ejemplo si (W)= 2Fh lee el mensaje que comienza en la posición 0 de la
+MPASM 03.50 Released                        I2C_EEPROM_02.ASM   10-26-2003  14:14:53         PAGE  7
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00110 ; página 2Fh de la memoria, que es la posición 2F00h absoluta. 
+                      00111 ; 
+                      00112         CBLOCK
+  00000012            00113         M24LC256_ValorCaracter          ; Valor ASCII del carácter leído.
+  00000013            00114         M24LC256_CursorPosicion
+                      00115         ENDC
+                      00116         
+0075                  00117 M24LC256_Mensaje_a_LCD
+0075   100E           00118         bcf     I2C_UltimoByteLeer
+0076   008F           00119         movwf   M24LC256_AddressHigh    ; Apunta al inicio de la página correspondiente.
+0077   0190           00120         clrf    M24LC256_AddressLow
+0078   2058           00121         call    M24LC256_InicializaLectura
+0079                  00122 M24LC256_PrimeraPosicion
+0079   0193           00123         clrf    M24LC256_CursorPosicion ; El cursor en la posición 0 de la línea.
+007A   2112           00124         call    LCD_Borra               ; Se sitúa en la primera posición de la línea 1 y
+007B                  00125 M24LC256_VisualizaCaracter                      ; borra la pantalla.
+007B   3010           00126         movlw   LCD_CaracteresPorLinea  ; ¿Ha llegado a final de línea?
+007C   0213           00127         subwf   M24LC256_CursorPosicion,W
+007D   1C03           00128         btfss   STATUS,C
+007E   2885           00129         goto    M24LC256_NoEsFinalLinea
+007F                  00130 M24LC256_EsFinalLinea
+007F   20A6           00131         call    Retardo_200ms           ; Lo mantiene visualizado durante este tiempo.
+0080   20A6           00132         call    Retardo_200ms
+0081   2071           00133         call    M24LC256_FinalizaLectura
+0082   0A90           00134         incf    M24LC256_AddressLow,F
+0083   2058           00135         call    M24LC256_InicializaLectura
+0084   2879           00136         goto    M24LC256_PrimeraPosicion
+0085                  00137 M24LC256_NoEsFinalLinea
+0085   203C           00138         call    I2C_LeeByte             ; Obtiene el ASCII del carácter apuntado.
+0086   0092           00139         movwf   M24LC256_ValorCaracter  ; Guarda el valor de carácter.
+0087   0892           00140         movf    M24LC256_ValorCaracter,F        ; Lo único que hace es posicionar flag Z. En caso
+0088   1903           00141         btfsc   STATUS,Z                ; que sea "0x00", que es código indicador final
+0089   288D           00142         goto    M24LC256_FinMensaje     ; de mensaje, sale fuera.
+008A                  00143 M24LC256_NoUltimoCaracter
+008A   2117           00144         call    LCD_Caracter            ; Visualiza el carácter ASCII leído.
+008B   0A93           00145         incf    M24LC256_CursorPosicion,F       ; Contabiliza el incremento de posición del 
+                      00146                                         ; cursor en la pantalla.
+008C   287B           00147         goto    M24LC256_VisualizaCaracter      ; Vuelve a visualizar el siguiente carácter
+008D                  00148 M24LC256_FinMensaje                     ; de la línea.
+008D   2071           00149         call    M24LC256_FinalizaLectura
+008E   0008           00150         return
+                      00151 
+                      00152 ;       ===================================================================
+                      00153 ;         Del libro "MICROCONTROLADOR PIC16F84. DESARROLLO DE PROYECTOS"
+                      00154 ;         E. Palacios, F. Remiro y L. López.
+                      00155 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00156 ;       ===================================================================
+                      00038         INCLUDE  <RETARDOS.INC>
+                      00001 ;**************************** Librería "RETARDOS.INC" *********************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+MPASM 03.50 Released                        I2C_EEPROM_02.ASM   10-26-2003  14:14:53         PAGE  8
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Librería con múltiples subrutinas de retardos, desde 4 microsegundos hasta 20 segundos. 
+                      00010 ; Además se pueden implementar otras subrutinas muy fácilmente.
+                      00011 ;
+                      00012 ; Se han calculado para un sistema microcontrolador con un PIC trabajando con un cristal
+                      00013 ; de cuarzo a 4 MHz. Como cada ciclo máquina son 4 ciclos de reloj, resulta que cada
+                      00014 ; ciclo máquina tarda 4 x 1/4MHz = 1 µs.
+                      00015 ;
+                      00016 ; En los comentarios, "cm" significa "ciclos máquina".
+                      00017 ;
+                      00018 ; ZONA DE DATOS *********************************************************************
+                      00019 
+                      00020         CBLOCK
+  00000014            00021         R_ContA                         ; Contadores para los retardos.
+  00000015            00022         R_ContB
+  00000016            00023         R_ContC
+                      00024         ENDC
+                      00025 ;
+                      00026 ; RETARDOS de 4 hasta 10 microsegundos ---------------------------------------------------
+                      00027 ;
+                      00028 ; A continuación retardos pequeños teniendo en cuenta que para una frecuencia de 4 MHZ,
+                      00029 ; la llamada a subrutina "call" tarda 2 ciclos máquina, el retorno de subrutina
+                      00030 ; "return" toma otros 2 ciclos máquina y cada instrucción "nop" tarda 1 ciclo máquina.
+                      00031 ;
+008F                  00032 Retardo_10micros                                ; La llamada "call" aporta 2 ciclos máquina.
+008F   0000           00033         nop                             ; Aporta 1 ciclo máquina.
+0090   0000           00034         nop                             ; Aporta 1 ciclo máquina.
+0091   0000           00035         nop                             ; Aporta 1 ciclo máquina.
+0092   0000           00036         nop                             ; Aporta 1 ciclo máquina.
+0093   0000           00037         nop                             ; Aporta 1 ciclo máquina.
+0094                  00038 Retardo_5micros                         ; La llamada "call" aporta 2 ciclos máquina.
+0094   0000           00039         nop                             ; Aporta 1 ciclo máquina.
+0095                  00040 Retardo_4micros                         ; La llamada "call" aporta 2 ciclos máquina.
+0095   0008           00041         return                          ; El salto del retorno aporta 2 ciclos máquina.
+                      00042 ;
+                      00043 ; RETARDOS de 20 hasta 500 microsegundos ------------------------------------------------
+                      00044 ;
+0096                  00045 Retardo_500micros                               ; La llamada "call" aporta 2 ciclos máquina.
+0096   0000           00046         nop                             ; Aporta 1 ciclo máquina.
+0097   30A4           00047         movlw   d'164'                  ; Aporta 1 ciclo máquina. Este es el valor de "K".
+0098   28A2           00048         goto    RetardoMicros           ; Aporta 2 ciclos máquina.
+0099                  00049 Retardo_200micros                               ; La llamada "call" aporta 2 ciclos máquina.
+0099   0000           00050         nop                             ; Aporta 1 ciclo máquina.
+009A   3040           00051         movlw   d'64'                   ; Aporta 1 ciclo máquina. Este es el valor de "K".
+009B   28A2           00052         goto    RetardoMicros           ; Aporta 2 ciclos máquina.
+009C                  00053 Retardo_100micros                               ; La llamada "call" aporta 2 ciclos máquina.
+009C   301F           00054         movlw   d'31'                   ; Aporta 1 ciclo máquina. Este es el valor de "K".
+009D   28A2           00055         goto    RetardoMicros           ; Aporta 2 ciclos máquina.
+009E                  00056 Retardo_50micros                                ; La llamada "call" aporta 2 ciclos máquina.
+009E   0000           00057         nop                             ; Aporta 1 ciclo máquina.
+009F   300E           00058         movlw   d'14'                   ; Aporta 1 ciclo máquina. Este es el valor de "K".
+MPASM 03.50 Released                        I2C_EEPROM_02.ASM   10-26-2003  14:14:53         PAGE  9
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+00A0   28A2           00059         goto    RetardoMicros           ; Aporta 2 ciclos máquina.
+00A1                  00060 Retardo_20micros                                ; La llamada "call" aporta 2 ciclos máquina.
+00A1   3005           00061         movlw   d'5'                    ; Aporta 1 ciclo máquina. Este es el valor de "K".
+                      00062 ;
+                      00063 ; El próximo bloque "RetardoMicros" tarda:
+                      00064 ; 1 + (K-1) + 2 + (K-1)x2 + 2 = (2 + 3K) ciclos máquina.
+                      00065 ;
+00A2                  00066 RetardoMicros
+00A2   0094           00067         movwf   R_ContA                 ; Aporta 1 ciclo máquina.
+00A3                  00068 Rmicros_Bucle
+00A3   0B94           00069         decfsz  R_ContA,F               ; (K-1)x1 cm (cuando no salta) + 2 cm (al saltar).
+00A4   28A3           00070         goto    Rmicros_Bucle           ; Aporta (K-1)x2 ciclos máquina.
+00A5   0008           00071         return                          ; El salto del retorno aporta 2 ciclos máquina.
+                      00072 ;
+                      00073 ;En total estas subrutinas tardan:
+                      00074 ; - Retardo_500micros:  2 + 1 + 1 + 2 + (2 + 3K) = 500 cm = 500 µs. (para K=164 y 4 MHz).
+                      00075 ; - Retardo_200micros:  2 + 1 + 1 + 2 + (2 + 3K) = 200 cm = 200 µs. (para K= 64 y 4 MHz).
+                      00076 ; - Retardo_100micros:  2     + 1 + 2 + (2 + 3K) = 100 cm = 100 µs. (para K= 31 y 4 MHz).
+                      00077 ; - Retardo_50micros :  2 + 1 + 1 + 2 + (2 + 3K) =  50 cm =  50 µs. (para K= 14 y 4 MHz).
+                      00078 ; - Retardo_20micros :  2     + 1     + (2 + 3K) =  20 cm =  20 µs. (para K=  5 y 4 MHz).
+                      00079 ;
+                      00080 ; RETARDOS de 1 ms hasta 200 ms. --------------------------------------------------------
+                      00081 ;
+00A6                  00082 Retardo_200ms                           ; La llamada "call" aporta 2 ciclos máquina.
+00A6   30C8           00083         movlw   d'200'                  ; Aporta 1 ciclo máquina. Este es el valor de "M".
+00A7   28B5           00084         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+00A8                  00085 Retardo_100ms                           ; La llamada "call" aporta 2 ciclos máquina.
+00A8   3064           00086         movlw   d'100'                  ; Aporta 1 ciclo máquina. Este es el valor de "M".
+00A9   28B5           00087         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+00AA                  00088 Retardo_50ms                            ; La llamada "call" aporta 2 ciclos máquina.
+00AA   3032           00089         movlw   d'50'                   ; Aporta 1 ciclo máquina. Este es el valor de "M".
+00AB   28B5           00090         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+00AC                  00091 Retardo_20ms                            ; La llamada "call" aporta 2 ciclos máquina.
+00AC   3014           00092         movlw   d'20'                   ; Aporta 1 ciclo máquina. Este es el valor de "M".
+00AD   28B5           00093         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+00AE                  00094 Retardo_10ms                            ; La llamada "call" aporta 2 ciclos máquina.
+00AE   300A           00095         movlw   d'10'                   ; Aporta 1 ciclo máquina. Este es el valor de "M".
+00AF   28B5           00096         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+00B0                  00097 Retardo_5ms                             ; La llamada "call" aporta 2 ciclos máquina.
+00B0   3005           00098         movlw   d'5'                    ; Aporta 1 ciclo máquina. Este es el valor de "M".
+00B1   28B5           00099         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+00B2                  00100 Retardo_2ms                             ; La llamada "call" aporta 2 ciclos máquina.
+00B2   3002           00101         movlw   d'2'                    ; Aporta 1 ciclo máquina. Este es el valor de "M".
+00B3   28B5           00102         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+00B4                  00103 Retardo_1ms                             ; La llamada "call" aporta 2 ciclos máquina.
+00B4   3001           00104         movlw   d'1'                    ; Aporta 1 ciclo máquina. Este es el valor de "M".
+                      00105 ;
+                      00106 ; El próximo bloque "Retardos_ms" tarda:
+                      00107 ; 1 + M + M + KxM + (K-1)xM + Mx2 + (K-1)Mx2 + (M-1) + 2 + (M-1)x2 + 2 =
+                      00108 ; = (2 + 4M + 4KM) ciclos máquina. Para K=249 y M=1 supone 1002 ciclos máquina
+                      00109 ; que a 4 MHz son 1002 µs = 1 ms.
+                      00110 ;
+00B5                  00111 Retardos_ms
+MPASM 03.50 Released                        I2C_EEPROM_02.ASM   10-26-2003  14:14:53         PAGE 10
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+00B5   0095           00112         movwf   R_ContB                 ; Aporta 1 ciclo máquina.
+00B6                  00113 R1ms_BucleExterno
+00B6   30F9           00114         movlw   d'249'                  ; Aporta Mx1 ciclos máquina. Este es el valor de "K".
+00B7   0094           00115         movwf   R_ContA                 ; Aporta Mx1 ciclos máquina.
+00B8                  00116 R1ms_BucleInterno
+00B8   0000           00117         nop                             ; Aporta KxMx1 ciclos máquina.
+00B9   0B94           00118         decfsz  R_ContA,F               ; (K-1)xMx1 cm (cuando no salta) + Mx2 cm (al saltar).
+00BA   28B8           00119         goto    R1ms_BucleInterno               ; Aporta (K-1)xMx2 ciclos máquina.
+00BB   0B95           00120         decfsz  R_ContB,F               ; (M-1)x1 cm (cuando no salta) + 2 cm (al saltar).
+00BC   28B6           00121         goto    R1ms_BucleExterno       ; Aporta (M-1)x2 ciclos máquina.
+00BD   0008           00122         return                          ; El salto del retorno aporta 2 ciclos máquina.
+                      00123 ;
+                      00124 ;En total estas subrutinas tardan:
+                      00125 ; - Retardo_200ms:      2 + 1 + 2 + (2 + 4M + 4KM) = 200007 cm = 200 ms. (M=200 y K=249).
+                      00126 ; - Retardo_100ms:      2 + 1 + 2 + (2 + 4M + 4KM) = 100007 cm = 100 ms. (M=100 y K=249).
+                      00127 ; - Retardo_50ms :      2 + 1 + 2 + (2 + 4M + 4KM) =  50007 cm =  50 ms. (M= 50 y K=249).
+                      00128 ; - Retardo_20ms :      2 + 1 + 2 + (2 + 4M + 4KM) =  20007 cm =  20 ms. (M= 20 y K=249).
+                      00129 ; - Retardo_10ms :      2 + 1 + 2 + (2 + 4M + 4KM) =  10007 cm =  10 ms. (M= 10 y K=249).
+                      00130 ; - Retardo_5ms  :      2 + 1 + 2 + (2 + 4M + 4KM) =   5007 cm =   5 ms. (M=  5 y K=249).
+                      00131 ; - Retardo_2ms  :      2 + 1 + 2 + (2 + 4M + 4KM) =   2007 cm =   2 ms. (M=  2 y K=249).
+                      00132 ; - Retardo_1ms  :      2 + 1     + (2 + 4M + 4KM) =   1005 cm =   1 ms. (M=  1 y K=249).
+                      00133 ;
+                      00134 ; RETARDOS de 0.5 hasta 20 segundos ---------------------------------------------------
+                      00135 ;
+00BE                  00136 Retardo_20s                             ; La llamada "call" aporta 2 ciclos máquina.
+00BE   30C8           00137         movlw   d'200'                  ; Aporta 1 ciclo máquina. Este es el valor de "N".
+00BF   28C9           00138         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+00C0                  00139 Retardo_10s                             ; La llamada "call" aporta 2 ciclos máquina.
+00C0   3064           00140         movlw   d'100'                  ; Aporta 1 ciclo máquina. Este es el valor de "N".
+00C1   28C9           00141         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+00C2                  00142 Retardo_5s                              ; La llamada "call" aporta 2 ciclos máquina.
+00C2   3032           00143         movlw   d'50'                   ; Aporta 1 ciclo máquina. Este es el valor de "N".
+00C3   28C9           00144         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+00C4                  00145 Retardo_2s                              ; La llamada "call" aporta 2 ciclos máquina.
+00C4   3014           00146         movlw   d'20'                   ; Aporta 1 ciclo máquina. Este es el valor de "N".
+00C5   28C9           00147         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+00C6                  00148 Retardo_1s                              ; La llamada "call" aporta 2 ciclos máquina.
+00C6   300A           00149         movlw   d'10'                   ; Aporta 1 ciclo máquina. Este es el valor de "N".
+00C7   28C9           00150         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+00C8                  00151 Retardo_500ms                           ; La llamada "call" aporta 2 ciclos máquina.
+00C8   3005           00152         movlw   d'5'                    ; Aporta 1 ciclo máquina. Este es el valor de "N".
+                      00153 ;
+                      00154 ; El próximo bloque "Retardo_1Decima" tarda:
+                      00155 ; 1 + N + N + MxN + MxN + KxMxN + (K-1)xMxN + MxNx2 + (K-1)xMxNx2 +
+                      00156 ;   + (M-1)xN + Nx2 + (M-1)xNx2 + (N-1) + 2 + (N-1)x2 + 2 =
+                      00157 ; = (2 + 4M + 4MN + 4KM) ciclos máquina. Para K=249, M=100 y N=1 supone 100011
+                      00158 ; ciclos máquina que a 4 MHz son 100011 µs = 100 ms = 0,1 s = 1 décima de segundo.
+                      00159 ;
+00C9                  00160 Retardo_1Decima
+00C9   0096           00161         movwf   R_ContC                 ; Aporta 1 ciclo máquina.
+00CA                  00162 R1Decima_BucleExterno2
+00CA   3064           00163         movlw   d'100'                  ; Aporta Nx1 ciclos máquina. Este es el valor de "M".
+00CB   0095           00164         movwf   R_ContB                 ; Aporta Nx1 ciclos máquina.
+MPASM 03.50 Released                        I2C_EEPROM_02.ASM   10-26-2003  14:14:53         PAGE 11
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+00CC                  00165 R1Decima_BucleExterno
+00CC   30F9           00166         movlw   d'249'                  ; Aporta MxNx1 ciclos máquina. Este es el valor de "K".
+00CD   0094           00167         movwf   R_ContA                 ; Aporta MxNx1 ciclos máquina.
+00CE                  00168 R1Decima_BucleInterno          
+00CE   0000           00169         nop                             ; Aporta KxMxNx1 ciclos máquina.
+00CF   0B94           00170         decfsz  R_ContA,F               ; (K-1)xMxNx1 cm (si no salta) + MxNx2 cm (al saltar).
+00D0   28CE           00171         goto    R1Decima_BucleInterno   ; Aporta (K-1)xMxNx2 ciclos máquina.
+00D1   0B95           00172         decfsz  R_ContB,F               ; (M-1)xNx1 cm (cuando no salta) + Nx2 cm (al saltar).
+00D2   28CC           00173         goto    R1Decima_BucleExterno   ; Aporta (M-1)xNx2 ciclos máquina.
+00D3   0B96           00174         decfsz  R_ContC,F               ; (N-1)x1 cm (cuando no salta) + 2 cm (al saltar).
+00D4   28CA           00175         goto    R1Decima_BucleExterno2  ; Aporta (N-1)x2 ciclos máquina.
+00D5   0008           00176         return                          ; El salto del retorno aporta 2 ciclos máquina.
+                      00177 ;
+                      00178 ;En total estas subrutinas tardan:
+                      00179 ; - Retardo_20s:        2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) = 20000807 cm = 20 s.
+                      00180 ;                       (N=200, M=100 y K=249).
+                      00181 ; - Retardo_10s:        2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) = 10000407 cm = 10 s.
+                      00182 ;                       (N=100, M=100 y K=249).
+                      00183 ; - Retardo_5s:         2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) =  5000207 cm =  5 s.
+                      00184 ;                       (N= 50, M=100 y K=249).
+                      00185 ; - Retardo_2s:         2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) =  2000087 cm =  2 s.
+                      00186 ;                       (N= 20, M=100 y K=249).
+                      00187 ; - Retardo_1s:         2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) =  1000047 cm =  1 s.
+                      00188 ;                       (N= 10, M=100 y K=249).
+                      00189 ; - Retardo_500ms:      2 + 1     + (2 + 4N + 4MN + 4KMN) =   500025 cm = 0,5 s.
+                      00190 ;                       (N=  5, M=100 y K=249).
+                      00191 
+                      00192 ;       ===================================================================
+                      00193 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00194 ;         E. Palacios, F. Remiro y L. López.
+                      00195 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00196 ;       ===================================================================
+                      00197 
+                      00198 
+                      00199 
+                      00200 
+                      00039         INCLUDE  <LCD_4BIT.INC>
+                      00001 ;**************************** Librería "LCD_4BIT.INC" ***********************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Estas subrutinas permiten realizar las tareas básicas de control de un módulo LCD de 2
+                      00010 ; líneas por 16 caracteres, compatible con el modelo LM016L.
+                      00011 ;
+                      00012 ; El visualizador LCD está conectado al Puerto B del PIC mediante un bus de 4 bits. Las
+                      00013 ; conexiones son:
+                      00014 ;    -  Las 4 líneas superiores del módulo LCD, pines <DB7:DB4>  se conectan a las 4
+                      00015 ;       líneas superiores del Puerto B del PIC, pines <RB7:RB4>.
+                      00016 ;    -  Pin RS del LCD a la línea RA0 del PIC.
+MPASM 03.50 Released                        I2C_EEPROM_02.ASM   10-26-2003  14:14:53         PAGE 12
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00017 ;    -  Pin R/W del LCD a la línea RA1 del PIC, o a masa.
+                      00018 ;    -  Pin Enable del LCD a la línea RA2 del PIC.
+                      00019 ;
+                      00020 ; Se utilizan llamadas a subrutinas de retardo de tiempo localizadas en la librería RETARDOS.INC.
+                      00021 ;
+                      00022 ; ZONA DE DATOS *********************************************************************
+                      00023 
+                      00024         CBLOCK
+  00000017            00025         LCD_Dato
+  00000018            00026         LCD_GuardaDato
+  00000019            00027         LCD_GuardaTRISB
+  0000001A            00028         LCD_Auxiliar1
+  0000001B            00029         LCD_Auxiliar2
+                      00030         ENDC
+                      00031 
+  00000010            00032 LCD_CaracteresPorLinea  EQU     .16     ; Número de caracteres por línea de la pantalla.
+                      00033 
+                      00034 #DEFINE  LCD_PinRS      PORTA,0
+                      00035 #DEFINE  LCD_PinRW      PORTA,1
+                      00036 #DEFINE  LCD_PinEnable  PORTA,2
+                      00037 #DEFINE  LCD_BusDatos   PORTB
+                      00038 
+                      00039 ; Subrutina "LCD_Inicializa" ------------------------------------------------------------
+                      00040 ;
+                      00041 ; Inicialización del módulo LCD: Configura funciones del LCD, produce reset por software,
+                      00042 ; borra memoria y enciende pantalla. El fabricante especifica que para garantizar la
+                      00043 ; configuración inicial hay que hacerla como sigue:
+                      00044 ;
+00D6                  00045 LCD_Inicializa
+00D6   1683           00046         bsf     STATUS,RP0              ; Configura las líneas conectadas al pines RS,
+00D7   1005           00047         bcf     LCD_PinRS               ; R/W y E.
+00D8   1105           00048         bcf     LCD_PinEnable
+00D9   1085           00049         bcf     LCD_PinRW
+00DA   1283           00050         bcf     STATUS,RP0
+00DB   1085           00051         bcf     LCD_PinRW               ; En caso de que esté conectado le indica
+                      00052                                         ; que se va a escribir en el LCD.
+00DC   1105           00053         bcf     LCD_PinEnable           ; Impide funcionamiento del LCD poniendo E=0.
+00DD   1005           00054         bcf     LCD_PinRS               ; Activa el Modo Comando poniendo RS=0.
+00DE   20AC           00055         call    Retardo_20ms
+00DF   3030           00056         movlw   b'00110000'     
+00E0   20EE           00057         call    LCD_EscribeLCD          ; Escribe el dato en el LCD.
+00E1   20B0           00058         call    Retardo_5ms     
+00E2   3030           00059         movlw   b'00110000'     
+00E3   20EE           00060         call    LCD_EscribeLCD
+00E4   2099           00061         call    Retardo_200micros
+00E5   3030           00062         movlw   b'00110000'     
+00E6   20EE           00063         call    LCD_EscribeLCD
+00E7   3020           00064         movlw   b'00100000'             ; Interface de 4 bits.
+00E8   20EE           00065         call    LCD_EscribeLCD
+                      00066 
+                      00067 ; Ahora configura el resto de los parámetros: 
+                      00068 
+00E9   2114           00069         call    LCD_2Lineas4Bits5x7     ; LCD de 2 líneas y caracteres de 5x7 puntos.
+MPASM 03.50 Released                        I2C_EEPROM_02.ASM   10-26-2003  14:14:53         PAGE 13
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+00EA   2112           00070         call    LCD_Borra               ; Pantalla encendida y limpia. Cursor al principio
+00EB   2110           00071         call    LCD_CursorOFF           ; de la línea 1. Cursor apagado.
+00EC   2102           00072         call    LCD_CursorIncr          ; Cursor en modo incrementar.
+00ED   0008           00073         return
+                      00074 
+                      00075 ; Subrutina "LCD_EscribeLCD" -----------------------------------------------------------
+                      00076 ;
+                      00077 ; Envía el dato del registro de trabajo W al bus de dato y produce un pequeño pulso en el pin
+                      00078 ; Enable del LCD. Para no alterar el contenido de las líneas de la parte baja del Puerto B que
+                      00079 ; no son utilizadas para el LCD (pines RB3:RB0), primero se lee estas líneas y después se
+                      00080 ; vuelve a enviar este dato sin cambiarlo.
+                      00081 
+00EE                  00082 LCD_EscribeLCD
+00EE   39F0           00083         andlw   b'11110000'             ; Se queda con el nibble alto del dato que es el
+00EF   0097           00084         movwf   LCD_Dato                ; que hay que enviar y lo guarda.
+00F0   0806           00085         movf    LCD_BusDatos,W          ; Lee la información actual de la parte baja
+00F1   390F           00086         andlw   b'00001111'             ; del Puerto B, que no se debe alterar.
+00F2   0497           00087         iorwf   LCD_Dato,F              ; Enviará la parte alta del dato de entrada
+                      00088                                         ; y en la parte baja lo que había antes.
+00F3   1683           00089         bsf     STATUS,RP0              ; Acceso al Banco 1.
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+00F4   0806           00090         movf    TRISB,W         ; Guarda la configuración que tenía antes TRISB.
+00F5   0099           00091         movwf   LCD_GuardaTRISB
+00F6   300F           00092         movlw   b'00001111'             ; Las 4 líneas inferiores del Puerto B se dejan 
+00F7   0586           00093         andwf   PORTB,F                 ; como estaban y las 4 superiores como salida.
+00F8   1283           00094         bcf     STATUS,RP0              ; Acceso al Banco 0.
+                      00095 ;
+00F9   0817           00096         movf    LCD_Dato,W              ; Recupera el dato a enviar.
+00FA   0086           00097         movwf   LCD_BusDatos            ; Envía el dato al módulo LCD.
+00FB   1505           00098         bsf     LCD_PinEnable           ; Permite funcionamiento del LCD mediante un pequeño
+00FC   1105           00099         bcf     LCD_PinEnable           ; pulso y termina impidiendo el funcionamiento del LCD.
+00FD   1683           00100         bsf     STATUS,RP0              ; Acceso al Banco 1. Restaura el antiguo valor en
+00FE   0819           00101         movf    LCD_GuardaTRISB,W       ; la configuración del Puerto B.
+00FF   0086           00102         movwf   PORTB                   ; Realmente es TRISB.
+0100   1283           00103         bcf     STATUS,RP0              ; Acceso al Banco 0.
+0101   0008           00104         return
+                      00105 
+                      00106 ; Subrutinas variadas para el control del módulo LCD -----------------------------------------
+                      00107 ;
+                      00108 ;Los comandos que pueden ser ejecutados son:
+                      00109 ;
+0102                  00110 LCD_CursorIncr                          ; Cursor en modo incrementar.
+0102   3006           00111         movlw   b'00000110'
+0103   2915           00112         goto    LCD_EnviaComando
+0104                  00113 LCD_Linea1                              ; Cursor al principio de la Línea 1.
+0104   3080           00114         movlw   b'10000000'             ; Dirección 00h de la DDRAM
+0105   2915           00115         goto    LCD_EnviaComando
+0106                  00116 LCD_Linea2                              ; Cursor al principio de la Línea 2.
+0106   30C0           00117         movlw   b'11000000'             ; Dirección 40h de la DDRAM
+0107   2915           00118         goto    LCD_EnviaComando
+0108                  00119 LCD_PosicionLinea1                      ; Cursor a posición de la Línea 1, a partir de la
+0108   3880           00120         iorlw   b'10000000'             ; dirección 00h de la DDRAM más el valor del
+0109   2915           00121         goto    LCD_EnviaComando        ; registro W.
+MPASM 03.50 Released                        I2C_EEPROM_02.ASM   10-26-2003  14:14:53         PAGE 14
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+010A                  00122 LCD_PosicionLinea2                      ; Cursor a posición de la Línea 2, a partir de la
+010A   38C0           00123         iorlw   b'11000000'             ; dirección 40h de la DDRAM más el valor del
+010B   2915           00124         goto    LCD_EnviaComando        ; registro W.
+010C                  00125 LCD_OFF                         ; Pantalla apagada.
+010C   3008           00126         movlw   b'00001000'
+010D   2915           00127         goto    LCD_EnviaComando
+010E                  00128 LCD_CursorON                            ; Pantalla encendida y cursor encendido.
+010E   300E           00129         movlw   b'00001110'
+010F   2915           00130         goto    LCD_EnviaComando
+0110                  00131 LCD_CursorOFF                           ; Pantalla encendida y cursor apagado.
+0110   300C           00132         movlw   b'00001100'
+0111   2915           00133         goto    LCD_EnviaComando
+0112                  00134 LCD_Borra                               ; Borra toda la pantalla, memoria DDRAM y pone el 
+0112   3001           00135         movlw   b'00000001'             ; cursor a principio de la línea 1.
+0113   2915           00136         goto    LCD_EnviaComando
+0114                  00137 LCD_2Lineas4Bits5x7                     ; Define la pantalla de 2 líneas, con caracteres
+0114   3028           00138         movlw   b'00101000'             ; de 5x7 puntos y conexión al PIC mediante bus de
+                      00139 ;       goto    LCD_EnviaComando        ; 4 bits. 
+                      00140 
+                      00141 ; Subrutinas "LCD_EnviaComando" y "LCD_Caracter" ------------------------------------
+                      00142 ;
+                      00143 ; "LCD_EnviaComando". Escribe un comando en el registro del módulo LCD. La palabra de
+                      00144 ; comando ha sido entregada a través del registro W.  Trabaja en Modo Comando.
+                      00145 ; "LCD_Caracter". Escribe en la memoria DDRAM del LCD el carácter ASCII introducido a
+                      00146 ; a través del registro W. Trabaja en Modo Dato.
+                      00147 ;
+0115                  00148 LCD_EnviaComando
+0115   1005           00149         bcf     LCD_PinRS               ; Activa el Modo Comando, poniendo RS=0.
+0116   2919           00150         goto    LCD_Envia
+0117                  00151 LCD_Caracter
+0117   1405           00152         bsf     LCD_PinRS               ; Activa el "Modo Dato", poniendo RS=1.
+0118   2121           00153         call    LCD_CodigoCGROM ; Obtiene el código para correcta visualización.
+0119                  00154 LCD_Envia
+0119   0098           00155         movwf   LCD_GuardaDato          ; Guarda el dato a enviar.
+011A   20EE           00156         call    LCD_EscribeLCD          ; Primero envía el nibble alto.
+011B   0E18           00157         swapf   LCD_GuardaDato,W        ; Ahora envía el nibble bajo. Para ello pasa el
+                      00158                                         ; nibble bajo del dato a enviar a parte alta del byte.
+011C   20EE           00159         call    LCD_EscribeLCD          ; Se envía al visualizador LCD.
+011D   1C05           00160         btfss   LCD_PinRS               ; Debe garantizar una correcta escritura manteniendo 
+011E   20B2           00161         call    Retardo_2ms             ; 2 ms en modo comando y 50 µs en modo cáracter.
+011F   209E           00162         call    Retardo_50micros
+0120   0008           00163         return  
+                      00164 
+                      00165 ; Subrutina "LCD_CodigoCGROM" -----------------------------------------------------------
+                      00166 ;
+                      00167 ; A partir del carácter ASCII número 127 los códigos de los caracteres definidos en la
+                      00168 ; tabla CGROM del LM016L no coinciden con los códigos ASCII. Así por ejemplo, el código
+                      00169 ; ASCII de la "Ñ" en la tabla CGRAM del LM016L es EEh.
+                      00170 ;
+                      00171 ; Esta subrutina convierte los códigos ASCII de la "Ñ", "º" y otros, a códigos CGROM para que
+                      00172 ; que puedan ser visualizado en el módulo LM016L.
+                      00173 ; 
+                      00174 ; Entrada:      En (W) el código ASCII del carácter que se desea visualizar.
+MPASM 03.50 Released                        I2C_EEPROM_02.ASM   10-26-2003  14:14:53         PAGE 15
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00175 ; Salida:       En (W) el código definido en la tabla CGROM.
+                      00176 
+0121                  00177 LCD_CodigoCGROM
+0121   0097           00178         movwf   LCD_Dato                ; Guarda el valor del carácter y comprueba si es
+0122                  00179 LCD_EnheMinuscula                       ; un carácter especial.
+0122   3CF1           00180         sublw   'ñ'                     ; ¿Es la "ñ"?
+0123   1D03           00181         btfss   STATUS,Z
+0124   2928           00182         goto    LCD_EnheMayuscula       ; No es "ñ".
+0125   30EE           00183         movlw   b'11101110'             ; Código CGROM de la "ñ".
+0126   0097           00184         movwf   LCD_Dato
+0127   2935           00185         goto    LCD_FinCGROM
+0128                  00186 LCD_EnheMayuscula
+0128   0817           00187         movf    LCD_Dato,W              ; Recupera el código ASCII de entrada.
+0129   3CD1           00188         sublw   'Ñ'                     ; ¿Es la "Ñ"?
+012A   1D03           00189         btfss   STATUS,Z
+012B   292F           00190         goto    LCD_Grado               ; No es "Ñ".
+012C   30EE           00191         movlw   b'11101110'             ; Código CGROM de la "ñ". (No hay símbolo para
+012D   0097           00192         movwf   LCD_Dato                ; la "Ñ" mayúscula en la CGROM).
+012E   2935           00193         goto    LCD_FinCGROM    
+012F                  00194 LCD_Grado
+012F   0817           00195         movf    LCD_Dato,W              ; Recupera el código ASCII de entrada.
+0130   3CBA           00196         sublw   'º'                     ; ¿Es el símbolo "º"?
+0131   1D03           00197         btfss   STATUS,Z
+0132   2935           00198         goto    LCD_FinCGROM            ; No es "º".
+0133   30DF           00199         movlw   b'11011111'             ; Código CGROM del símbolo "º".
+0134   0097           00200         movwf   LCD_Dato
+0135                  00201 LCD_FinCGROM
+0135   0817           00202         movf    LCD_Dato,W              ; En (W) el código buscado.
+0136   0008           00203         return
+                      00204 
+                      00205 ; Subrutina "LCD_DosEspaciosBlancos" y "LCD_LineaBlanco" --------------------------------
+                      00206 ;
+                      00207 ; Visualiza espacios en blanco.
+                      00208 
+0137                  00209 LCD_LineaEnBlanco
+0137   3010           00210         movlw   LCD_CaracteresPorLinea
+0138   293E           00211         goto    LCD_EnviaBlancos
+0139                  00212 LCD_UnEspacioBlanco
+0139   3001           00213         movlw   .1
+013A   293E           00214         goto    LCD_EnviaBlancos
+013B                  00215 LCD_DosEspaciosBlancos
+013B   3002           00216         movlw   .2
+013C   293E           00217         goto    LCD_EnviaBlancos
+013D                  00218 LCD_TresEspaciosBlancos
+013D   3003           00219         movlw   .3
+013E                  00220 LCD_EnviaBlancos
+013E   009A           00221         movwf   LCD_Auxiliar1           ; (LCD_Auxiliar1) se utiliza como contador.
+013F                  00222 LCD_EnviaOtroBlanco     
+013F   3020           00223         movlw   ' '                     ; Esto es un espacio en blanco.
+0140   2117           00224         call    LCD_Caracter            ; Visualiza tanto espacios en blanco como se
+0141   0B9A           00225         decfsz  LCD_Auxiliar1,F         ; haya cargado en (LCD_Auxiliar1).
+0142   293F           00226         goto    LCD_EnviaOtroBlanco
+0143   0008           00227         return
+MPASM 03.50 Released                        I2C_EEPROM_02.ASM   10-26-2003  14:14:53         PAGE 16
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00228 
+                      00229 ; Subrutinas "LCD_ByteCompleto" y "LCD_Byte" --------------------------------------------
+                      00230 ;
+                      00231 ; Subrutina "LCD_ByteCompleto", visualiza el byte que almacena el registro W en el
+                      00232 ; lugar actual de la pantalla. Por ejemplo, si (W)=b'10101110' visualiza "AE".
+                      00233 ;
+                      00234 ; Subrutina "LCD_Byte" igual que la anterior, pero en caso de que el nibble alto sea cero 
+                      00235 ; visualiza en su lugar un espacio en blanco. Por ejemplo si (W)=b'10101110' visualiza "AE"
+                      00236 ; y si (W)=b'00001110', visualiza " E" (un espacio blanco delante).
+                      00237 ;
+                      00238 ; Utilizan la subrutina "LCD_Nibble" que se analiza más adelante.
+                      00239 ;
+0144                  00240 LCD_Byte
+0144   009B           00241         movwf   LCD_Auxiliar2           ; Guarda el valor de entrada.
+0145   39F0           00242         andlw   b'11110000'             ; Analiza si el nibble alto es cero.
+0146   1D03           00243         btfss   STATUS,Z                ; Si es cero lo apaga.
+0147   294C           00244         goto    LCD_VisualizaAlto               ; No es cero y lo visualiza.
+0148   3020           00245         movlw   ' '                     ; Visualiza un espacio en blanco.
+0149   2117           00246         call    LCD_Caracter
+014A   294E           00247         goto    LCD_VisualizaBajo
+                      00248 
+014B                  00249 LCD_ByteCompleto
+014B   009B           00250         movwf   LCD_Auxiliar2           ; Guarda el valor de entrada.
+014C                  00251 LCD_VisualizaAlto
+014C   0E1B           00252         swapf   LCD_Auxiliar2,W         ; Pone el nibble alto en la parte baja.
+014D   214F           00253         call    LCD_Nibble              ; Lo visualiza.
+014E                  00254 LCD_VisualizaBajo
+014E   081B           00255         movf    LCD_Auxiliar2,W         ; Repite el proceso con el nibble bajo.
+                      00256 ;       call    LCD_Nibble              ; Lo visualiza.
+                      00257 ;       return
+                      00258 
+                      00259 ; Subrutina "LCD_Nibble" ----------------------------------------------------------------
+                      00260 ;
+                      00261 ; Visualiza en el lugar actual de la pantalla, el valor hexadecimal que almacena en el nibble
+                      00262 ; bajo del registro W. El nibble alto de W no es tenido en cuenta. Ejemplos:
+                      00263 ; - Si (W)=b'01010110', se visualizará "6". 
+                      00264 ; - Si (W)=b'10101110', se visualizará "E". 
+                      00265 ;
+014F                  00266 LCD_Nibble
+014F   390F           00267         andlw   b'00001111'             ; Se queda con la parte baja.
+0150   009A           00268         movwf   LCD_Auxiliar1           ; Lo guarda.
+0151   3C09           00269         sublw   0x09                    ; Comprueba si hay que representarlo con letra.
+0152   1C03           00270         btfss   STATUS,C        
+0153   2957           00271         goto    LCD_EnviaByteLetra
+0154   081A           00272         movf    LCD_Auxiliar1,W
+0155   3E30           00273         addlw   '0'                     ; El número se pasa a carácter ASCII sumándole
+0156   2959           00274         goto    LCD_FinVisualizaDigito  ; el ASCII del cero y lo visualiza.
+0157                  00275 LCD_EnviaByteLetra
+0157   081A           00276         movf    LCD_Auxiliar1,W
+0158   3E37           00277         addlw   'A'-0x0A                        ; Sí, por tanto, se le suma el ASCII de la 'A'.
+0159                  00278 LCD_FinVisualizaDigito
+0159   2917           00279         goto    LCD_Caracter            ; Y visualiza el carácter. Se hace con un "goto"
+                      00280                                         ; para no sobrecargar la pila.
+MPASM 03.50 Released                        I2C_EEPROM_02.ASM   10-26-2003  14:14:53         PAGE 17
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00281                                         
+                      00282 ;       ===================================================================
+                      00283 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00284 ;         E. Palacios, F. Remiro y L. López.
+                      00285 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00286 ;       ===================================================================
+                      00040         END
+MPASM 03.50 Released                        I2C_EEPROM_02.ASM   10-26-2003  14:14:53         PAGE 18
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+C                                 00000000
+DC                                00000001
+EEADR                             00000009
+EECON1                            00000088
+EECON2                            00000089
+EEDATA                            00000008
+EEIE                              00000006
+EEIF                              00000004
+F                                 00000001
+FSR                               00000004
+GIE                               00000007
+I2C_ContadorBits                  0000000C
+I2C_Dato                          0000000D
+I2C_EnviaBit                      0000002A
+I2C_EnviaByte                     00000027
+I2C_EnviaCero                     0000002D
+I2C_EnviaStart                    00000019
+I2C_EnviaStop                     00000021
+I2C_EnviaUno                      0000002F
+I2C_Flags                         0000000E
+I2C_FlancoSCL                     00000030
+I2C_LeeBit                        0000003F
+I2C_LeeByte                       0000003C
+I2C_UltimoByteLeer                I2C_Flags,0
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+Inicio                            00000000
+LCD_2Lineas4Bits5x7               00000114
+LCD_Auxiliar1                     0000001A
+LCD_Auxiliar2                     0000001B
+LCD_Borra                         00000112
+LCD_BusDatos                      PORTB
+LCD_Byte                          00000144
+LCD_ByteCompleto                  0000014B
+LCD_Caracter                      00000117
+LCD_CaracteresPorLinea            00000010
+LCD_CodigoCGROM                   00000121
+LCD_CursorIncr                    00000102
+LCD_CursorOFF                     00000110
+LCD_CursorON                      0000010E
+LCD_Dato                          00000017
+LCD_DosEspaciosBlancos            0000013B
+LCD_EnheMayuscula                 00000128
+LCD_EnheMinuscula                 00000122
+LCD_Envia                         00000119
+LCD_EnviaBlancos                  0000013E
+LCD_EnviaByteLetra                00000157
+LCD_EnviaComando                  00000115
+LCD_EnviaOtroBlanco               0000013F
+MPASM 03.50 Released                        I2C_EEPROM_02.ASM   10-26-2003  14:14:53         PAGE 19
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+LCD_EscribeLCD                    000000EE
+LCD_FinCGROM                      00000135
+LCD_FinVisualizaDigito            00000159
+LCD_Grado                         0000012F
+LCD_GuardaDato                    00000018
+LCD_GuardaTRISB                   00000019
+LCD_Inicializa                    000000D6
+LCD_Linea1                        00000104
+LCD_Linea2                        00000106
+LCD_LineaEnBlanco                 00000137
+LCD_Nibble                        0000014F
+LCD_OFF                           0000010C
+LCD_PinEnable                     PORTA,2
+LCD_PinRS                         PORTA,0
+LCD_PinRW                         PORTA,1
+LCD_PosicionLinea1                00000108
+LCD_PosicionLinea2                0000010A
+LCD_TresEspaciosBlancos           0000013D
+LCD_UnEspacioBlanco               00000139
+LCD_VisualizaAlto                 0000014C
+LCD_VisualizaBajo                 0000014E
+M24LC256_AddressHigh              0000000F
+M24LC256_AddressLow               00000010
+M24LC256_CursorPosicion           00000013
+M24LC256_Dato                     00000011
+M24LC256_DireccionEscritura       000000A0
+M24LC256_DireccionLectura         000000A1
+M24LC256_EsFinalLinea             0000007F
+M24LC256_FinMensaje               0000008D
+M24LC256_FinalizaLectura          00000071
+M24LC256_InicializaEscritura      00000050
+M24LC256_InicializaLectura        00000058
+M24LC256_LeeOtroByte              00000068
+M24LC256_Mensaje_a_LCD            00000075
+M24LC256_NoEsFinalLinea           00000085
+M24LC256_NoUltimoCaracter         0000008A
+M24LC256_PrimeraPosicion          00000079
+M24LC256_ValorCaracter            00000012
+M24LC256_VisualizaCaracter        0000007B
+NOT_PD                            00000003
+NOT_RBPU                          00000007
+NOT_TO                            00000004
+OPTION_REG                        00000081
+PCL                               00000002
+PCLATH                            0000000A
+PORTA                             00000005
+PORTB                             00000006
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+Pagina                            00000000
+Principal                         00000001
+MPASM 03.50 Released                        I2C_EEPROM_02.ASM   10-26-2003  14:14:53         PAGE 20
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+R1Decima_BucleExterno             000000CC
+R1Decima_BucleExterno2            000000CA
+R1Decima_BucleInterno             000000CE
+R1ms_BucleExterno                 000000B6
+R1ms_BucleInterno                 000000B8
+RBIE                              00000003
+RBIF                              00000000
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+R_ContA                           00000014
+R_ContB                           00000015
+R_ContC                           00000016
+RetardoMicros                     000000A2
+Retardo_100micros                 0000009C
+Retardo_100ms                     000000A8
+Retardo_10micros                  0000008F
+Retardo_10ms                      000000AE
+Retardo_10s                       000000C0
+Retardo_1Decima                   000000C9
+Retardo_1ms                       000000B4
+Retardo_1s                        000000C6
+Retardo_200micros                 00000099
+Retardo_200ms                     000000A6
+Retardo_20micros                  000000A1
+Retardo_20ms                      000000AC
+Retardo_20s                       000000BE
+Retardo_2ms                       000000B2
+Retardo_2s                        000000C4
+Retardo_4micros                   00000095
+Retardo_500micros                 00000096
+Retardo_500ms                     000000C8
+Retardo_50micros                  0000009E
+Retardo_50ms                      000000AA
+Retardo_5micros                   00000094
+Retardo_5ms                       000000B0
+Retardo_5s                        000000C2
+Retardos_ms                       000000B5
+Rmicros_Bucle                     000000A3
+SCL                               PORTA,3
+SCL_AltaImpedancia                00000013
+SCL_Bajo                          0000000E
+SCL_EsperaNivelAlto               00000016
+SDA                               PORTA,4
+SDA_AltaImpedancia                0000000A
+SDA_Bajo                          00000005
+STATUS                            00000003
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+TMR0                              00000001
+TRISA                             00000085
+MPASM 03.50 Released                        I2C_EEPROM_02.ASM   10-26-2003  14:14:53         PAGE 21
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+TRISB                             00000086
+W                                 00000000
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_CP_OFF                           00003FFF
+_CP_ON                            0000000F
+_HS_OSC                           00003FFE
+_LP_OSC                           00003FFC
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC                           00003FFF
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FFD
+__16F84A                          00000001
+
+
+MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
+
+0000 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0040 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0080 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+00C0 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0100 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0140 : XXXXXXXXXXXXXXXX XXXXXXXXXX------ ---------------- ----------------
+2000 : -------X-------- ---------------- ---------------- ----------------
+
+All other memory blocks unused.
+
+Program Memory Words Used:   346
+Program Memory Words Free:   678
+
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :     1 reported,     0 suppressed
+
+

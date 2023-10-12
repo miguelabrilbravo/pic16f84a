@@ -1,0 +1,723 @@
+MPASM 03.50 Released                      I2C_EXPANSOR_01.ASM   10-26-2003  22:06:04         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;************************************ I2C_Expansor_01.asm *****************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Programa para comprobar el funcionamiento del PCF8574 que es un expansor de bus I2C.
+                      00010 ; Utiliza dos circuitos integrados tal como se indica en el esquema correspondiente:
+                      00011 ;  -  Uno como entrada, leyendo un array de 8 interruptores. Su pin A0 se conecta a masa.
+                      00012 ;  -  Otro como salida, visualizando los datos en un array de diodos LEDs. Su pin A0 se 
+                      00013 ;     conecta a Vcc.
+                      00014 ;
+                      00015 ; Este programa lee los switches conectados al PCF8574 que actúa como entrada y su valor se
+                      00016 ; visualiza en los LEDs conectados al PCF8574 de salida.
+                      00017 ; 
+                      00018 ; ZONA DE DATOS **********************************************************************
+                      00019 
+2007   3FF1           00020         __CONFIG   _CP_OFF &  _WDT_OFF & _PWRTE_ON & _XT_OSC
+                      00021         LIST       P=16F84A
+                      00022         INCLUDE   <P16F84A.INC>
+                      00001         LIST
+                      00002 ; P16F84A.INC  Standard Header File, Version 2.00    Microchip Technology, Inc.
+                      00134         LIST
+                      00023 
+                      00024         CBLOCK  0x0C
+  0000000C            00025         Dato
+                      00026         ENDC
+                      00027 
+  00000041            00028 PCF8574_DireccionLectura        EQU     b'01000001'
+  00000042            00029 PCF8574_DireccionEscritura      EQU     b'01000010'
+                      00030 
+                      00031 #DEFINE  PCB8574_INT    PORTB,0         ; Línea donde se conecta la línea de 
+                      00032                                         ; interrupción del expansor de bus I2C.
+                      00033 ; ZONA DE CÓDIGOS ********************************************************************
+                      00034 
+0000                  00035         ORG     0
+0000   2805           00036         goto    Inicio
+0004                  00037         ORG     4
+0004   280F           00038         goto    ServicioInterrupcion
+0005                  00039 Inicio
+0005   1683           00040         bsf     STATUS,RP0              ; Acceso Banco 1.
+0006   1406           00041         bsf     PCB8574_INT             ; La línea RB0/INT se configura como entrada.
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0007   1381           00042         bcf     OPTION_REG,NOT_RBPU     ; Habilita las resistencia de Pull-Up del Puerto B.
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0008   1301           00043         bcf     OPTION_REG,INTEDG       ; Interrupción INT activa por flanco de bajada.
+0009   1283           00044         bcf     STATUS,RP0              ; Acceso Banco 0.
+000A   200F           00045         call    ServicioInterrupcion    ; Para que lea y escriba por primera vez.
+000B   3090           00046         movlw   b'10010000'             ; Habilita la interrupción INT y la general.
+000C   008B           00047         movwf   INTCON
+000D                  00048 Principal
+MPASM 03.50 Released                      I2C_EXPANSOR_01.ASM   10-26-2003  22:06:04         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+000D   0063           00049         sleep                           ; Pasa a modo de reposo.
+000E   280D           00050         goto    Principal
+                      00051 
+                      00052 ; Subrutina "ServicioInterrupcion" ------------------------------------------------------
+                      00053 ;
+                      00054 ; Lee los interruptores conectados al PCF8574 que actúa como entrada y el resultado lo visualiza
+                      00055 ; en los diodos LEDs conectados al PCF8574 configurado como salida.
+                      00056 
+000F                  00057 ServicioInterrupcion
+000F   2090           00058         call    Retardo_20ms            ; Espera unos instante a que se estabilicen los
+0010   2061           00059         call    PCF8574_Lee             ; niveles de tensión y lee la entrada.
+0011   008C           00060         movwf   Dato                    ; Complementa el dato leído porque los diodos
+0012   090C           00061         comf    Dato,W                  ; se activan con nivel bajo, (ver esquema).
+0013   206A           00062         call    PCF8574_Escribe         ; Lo visualiza en los diodos LEDs.
+0014   108B           00063         bcf     INTCON,INTF
+0015   0009           00064         retfie
+                      00065 
+                      00066         INCLUDE  <BUS_I2C.INC>
+                      00001 ;**************************** Librería "BUS_I2C.INC" ************************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Estas subrutinas permiten realizar las tareas básicas de control del bus serie I2C, 
+                      00010 ; por parte de un solo microcontrolador maestro.
+                      00011 ;
+                      00012 ; ZONA DE DATOS **********************************************************************
+                      00013 ;
+                      00014         CBLOCK
+  0000000D            00015         I2C_ContadorBits                ; Cuenta los bits a transmitir o a recibir.
+  0000000E            00016         I2C_Dato                        ; Dato a transmitir o recibido.
+  0000000F            00017         I2C_Flags                       ; Guarda la información del estado del bus I2C.
+                      00018         ENDC
+                      00019 
+                      00020 #DEFINE I2C_UltimoByteLeer      I2C_Flags,0
+                      00021 ;    -  (I2C_UltimoByteLeer)=0, NO es el último byte a leer por el maestro.
+                      00022 ;    -  (I2C_UltimoByteLeer)=1, SÍ es el último byte a leer por el maestro.
+                      00023 
+                      00024 ; La definición de las líneas SCL y SDA del bus I2C se puede cambiar según las
+                      00025 ; necesidades del hardware.
+                      00026 
+                      00027 #DEFINE SCL     PORTA,3                 ; Línea SCL del bus I2C.
+                      00028 #DEFINE SDA     PORTA,4                 ; Línea SDA del bus I2C.
+                      00029 ;
+                      00030 ; Subrutina "SDA_Bajo" -------------------------------------------------------------------------------
+                      00031 ;
+0016                  00032 SDA_Bajo
+0016   1683           00033         bsf     STATUS,RP0              ; Configura la línea SDA como salida.
+0017   1205           00034         bcf     SDA
+0018   1283           00035         bcf     STATUS,RP0
+MPASM 03.50 Released                      I2C_EXPANSOR_01.ASM   10-26-2003  22:06:04         PAGE  3
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0019   1205           00036         bcf     SDA                     ; SDA en bajo.
+001A   0008           00037         return
+                      00038 ;
+                      00039 ; Subrutina "SDA_AltaImpedancia" --------------------------------------------------------
+                      00040 ;
+001B                  00041 SDA_AltaImpedancia
+001B   1683           00042         bsf     STATUS,RP0              ; Configura la línea SDA entrada.
+001C   1605           00043         bsf     SDA                     ; Lo pone en alta impedancia y, gracias a la
+001D   1283           00044         bcf     STATUS,RP0              ; Rp de esta línea, se mantiene a nivel alto.
+001E   0008           00045         return
+                      00046 ;
+                      00047 ; Subrutina "SCL_Bajo" ------------------------------------------------------------------
+                      00048 ;
+001F                  00049 SCL_Bajo
+001F   1683           00050         bsf     STATUS,RP0
+0020   1185           00051         bcf     SCL                     ; Configura la línea SCL como salida.
+0021   1283           00052         bcf     STATUS,RP0
+0022   1185           00053         bcf     SCL                     ; La línea de reloj SCL en bajo.
+0023   0008           00054         return
+                      00055 ;
+                      00056 ; Subrutina "SCL_AltaImpedancia" --------------------------------------------------------
+                      00057 ;
+0024                  00058 SCL_AltaImpedancia
+0024   1683           00059         bsf     STATUS,RP0              ; Configura la línea SCL entrada.
+0025   1585           00060         bsf     SCL                     ; Lo pone en alta impedancia y, gracias a la Rp
+0026   1283           00061         bcf     STATUS,RP0              ; de esta línea, se mantiene a nivel alto.
+0027                  00062 SCL_EsperaNivelAlto
+0027   1D85           00063         btfss   SCL                     ; Si algún esclavo mantiene esta línea en bajo
+0028   2827           00064         goto    SCL_EsperaNivelAlto     ; hay que esperar.
+0029   0008           00065         return
+                      00066 ;
+                      00067 ; Subrutina "I2C_EnviaStart" ------------------------------------------------------------
+                      00068 ;
+                      00069 ; Esta subrutina envía una condición de Start o inicio.
+                      00070 ;
+002A                  00071 I2C_EnviaStart
+002A   201B           00072         call    SDA_AltaImpedancia      ; Línea SDA en alto.
+002B   2024           00073         call    SCL_AltaImpedancia      ; Línea SCL en alto.
+002C   2079           00074         call    Retardo_4micros         ; Tiempo tBUF del protocolo.
+002D   2016           00075         call    SDA_Bajo                ; Flanco de bajada de SDA mientras SCL está alto.
+002E   2079           00076         call    Retardo_4micros         ; Tiempo tHD;STA del protocolo.
+002F   201F           00077         call    SCL_Bajo                ; Flanco de bajada del reloj SCL.
+0030   2079           00078         call    Retardo_4micros 
+0031   0008           00079         return
+                      00080 ;
+                      00081 ; Subrutina "I2C_EnviaStop" -------------------------------------------------------------
+                      00082 ;
+                      00083 ; Esta subrutina envía un condición de Stop o parada.
+                      00084 ;
+0032                  00085 I2C_EnviaStop
+0032   2016           00086         call    SDA_Bajo
+0033   2024           00087         call    SCL_AltaImpedancia      ; Flanco de subida de SCL.
+0034   2079           00088         call    Retardo_4micros         ; Tiempo tSU;STO del protocolo.
+MPASM 03.50 Released                      I2C_EXPANSOR_01.ASM   10-26-2003  22:06:04         PAGE  4
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0035   201B           00089         call    SDA_AltaImpedancia      ; Flanco de subida de SDA.
+0036   2079           00090         call    Retardo_4micros         ; Tiempo tBUF del protocolo.
+0037   0008           00091         return
+                      00092 ;
+                      00093 ; Subrutina "I2C_EnviaByte" -------------------------------------------------------------
+                      00094 ;
+                      00095 ; El microcontrolador maestro transmite un byte por el bus I2C, comenzando por el bit
+                      00096 ; MSB. El byte a transmitir debe estar cargado previamente en el registro de trabajo W.
+                      00097 ; De la subrutina ejecutada anteriormente I2C_EnviaStart o esta misma I2C_EnviaByte, 
+                      00098 ; la línea SCL se debe encontrar a nivel bajo al menos durante 5 µs.
+                      00099 ;
+0038                  00100 I2C_EnviaByte
+0038   008E           00101         movwf   I2C_Dato                        ; Almacena el byte a transmitir.
+0039   3008           00102         movlw   0x08                    ; A transmitir 8 bits.
+003A   008D           00103         movwf   I2C_ContadorBits
+003B                  00104 I2C_EnviaBit
+003B   0D8E           00105         rlf     I2C_Dato,F              ; Chequea el bit, llevándolo previamente al Carry.
+003C   1803           00106         btfsc   STATUS,C
+003D   2840           00107         goto    I2C_EnviaUno
+003E                  00108 I2C_EnviaCero
+003E   2016           00109         call    SDA_Bajo                ; Si es "0" envía un nivel bajo.
+003F   2841           00110         goto    I2C_FlancoSCL
+0040                  00111 I2C_EnviaUno
+0040   201B           00112         call    SDA_AltaImpedancia      ; Si es "1" lo activará a alto.
+0041                  00113 I2C_FlancoSCL
+0041   2024           00114         call    SCL_AltaImpedancia      ; Flanco de subida del SCL.
+0042   2079           00115         call    Retardo_4micros         ; Tiempo tHIGH del protocolo.
+0043   201F           00116         call    SCL_Bajo                ; Termina el semiperiodo positivo del reloj.
+0044   2079           00117         call    Retardo_4micros         ; Tiempo tHD;DAT del protocolo.
+0045   0B8D           00118         decfsz  I2C_ContadorBits,F              ; Lazo para los ocho bits.
+0046   283B           00119         goto    I2C_EnviaBit
+                      00120 ;
+0047   201B           00121         call    SDA_AltaImpedancia      ; Libera la línea de datos.
+0048   2024           00122         call    SCL_AltaImpedancia      ; Pulso en alto de reloj para que el esclavo
+0049   2079           00123         call    Retardo_4micros         ; pueda enviar el bit ACK.
+004A   201F           00124         call    SCL_Bajo
+004B   2079           00125         call    Retardo_4micros
+004C   0008           00126         return
+                      00127 ;
+                      00128 ; Subrutina "I2C_LeeByte" ---------------------------------------------------------------
+                      00129 ;
+                      00130 ; El microcontrolador maestro lee un byte desde el esclavo conectado al bus I2C. El dato
+                      00131 ; recibido se carga en el registro I2C_Dato y lo envía a la subrutina superior a través
+                      00132 ; del registro W. Se empieza a leer por el bit de mayor peso MSB.
+                      00133 ; De alguna de las subrutinas ejecutadas anteriormente I2C_EnviaStart, I2C_EnviaByte
+                      00134 ; o esta misma I2C_LeeByte, la línea SCL lleva en bajo al menos 5 µs.
+                      00135 
+004D                  00136 I2C_LeeByte
+004D   3008           00137         movlw   0x08                    ; A recibir 8 bits.
+004E   008D           00138         movwf   I2C_ContadorBits
+004F   201B           00139         call    SDA_AltaImpedancia      ; Deja libre la línea de datos.
+0050                  00140 I2C_LeeBit
+0050   2024           00141         call    SCL_AltaImpedancia      ; Flanco de subida del reloj.
+MPASM 03.50 Released                      I2C_EXPANSOR_01.ASM   10-26-2003  22:06:04         PAGE  5
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0051   1003           00142         bcf     STATUS,C                ; En principio supone que es "0".
+0052   1A05           00143         btfsc   SDA                     ; Lee el bit
+0053   1403           00144         bsf     STATUS,C                ; Si es "1" carga 1 en el Carry.
+0054   0D8E           00145         rlf     I2C_Dato,F              ; Lo introduce en el registro.
+0055   201F           00146         call    SCL_Bajo                ; Termina el semiperiodo positivo del reloj.
+0056   2079           00147         call    Retardo_4micros         ; Tiempo tHD;DAT del protocolo.
+0057   0B8D           00148         decfsz  I2C_ContadorBits,F              ; Lazo para los 8 bits.
+0058   2850           00149         goto    I2C_LeeBit
+                      00150 ;
+                      00151 ; Chequea si este es el último byte a leer para enviar o no el bit de reconocimiento
+                      00152 ; ACK en consecuencia.
+                      00153 ;
+0059   1C0F           00154         btfss   I2C_UltimoByteLeer      ; Si es el último, no debe enviar
+                      00155                                         ; el bit de reconocimiento ACK.
+005A   2016           00156         call    SDA_Bajo                ; Envía el bit de reconocimiento ACK
+                      00157                                         ; porque todavía no es el último byte a leer.
+005B   2024           00158         call    SCL_AltaImpedancia      ; Pulso en alto del SCL para transmitir el
+005C   2079           00159         call    Retardo_4micros         ; bit ACK de reconocimiento. Este es tHIGH.
+005D   201F           00160         call    SCL_Bajo                ; Pulso de bajada del SCL.
+005E   2079           00161         call    Retardo_4micros
+005F   080E           00162         movf    I2C_Dato,W              ; El resultado se manda en el registro de
+0060   0008           00163         return                          ; de trabajo W.
+                      00164         
+                      00165 ;       ===================================================================
+                      00166 ;         Del libro "MICROCONTROLADOR PIC16F84. DESARROLLO DE PROYECTOS"
+                      00167 ;         E. Palacios, F. Remiro y L. López.
+                      00168 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00169 ;       ===================================================================
+                      00067         INCLUDE  <PCF8574.INC>  
+                      00001 ;**************************** Librería "PCF8574.INC" **********************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Estas subrutinas permiten realizar las tareas de manejo del expansor de bus I2C PCF8574
+                      00010 ; que convierte un bus de 8 líneas paralelo a bus serie I2C y viceversa.
+                      00011 ;
+                      00012 ; Como es posible que haya más de un expansor en el mismo circuito, se deja a la subrutina
+                      00013 ; de llamada a éstas que determine las direcciones de escritura y lectura mediante las
+                      00014 ; etiquetas "PCF8574_DireccionLectura" y "PCF8574_DireccionEscritura", atendiendo a las
+                      00015 ; características del hardware utilizado.
+                      00016 ;
+                      00017 ; ZONA DE DATOS **********************************************************************
+                      00018 
+                      00019         CBLOCK
+  00000010            00020         PCF8574_Dato                    ; Aquí guarda el resultado del dato leído o que
+                      00021         ENDC                            ; se va a escribir.
+                      00022 
+                      00023 ; Subrutina "PCF8574_Lee" -------------------------------------------------------------
+                      00024 ;
+MPASM 03.50 Released                      I2C_EXPANSOR_01.ASM   10-26-2003  22:06:04         PAGE  6
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00025 ; Lee el periférico conectado al bus paralelo de 8 líneas del PCF8574 que actúa como
+                      00026 ; entrada y el resultado lo proporciona en el registro de trabajo W.
+                      00027 
+0061                  00028 PCF8574_Lee
+0061   202A           00029         call    I2C_EnviaStart          ; Envía la condición de Start.
+0062   3041           00030         movlw   PCF8574_DireccionLectura        ; Apunta al expansor de lectura.
+0063   2038           00031         call    I2C_EnviaByte
+0064   140F           00032         bsf     I2C_UltimoByteLeer
+0065   204D           00033         call    I2C_LeeByte             ; Lee el puerto.
+0066   0090           00034         movwf   PCF8574_Dato            ; Lo guarda en el registro correspondiente.
+0067   2032           00035         call    I2C_EnviaStop           ; Acaba de leer.
+0068   0810           00036         movf    PCF8574_Dato,W          ; Recupera el valor del dato leído.
+0069   0008           00037         return
+                      00038 
+                      00039 ; Subrutina "PCF8574_Escribe" ----------------------------------------------------------
+                      00040 ;
+                      00041 ; Escribe en el periférico conectado bus paralelo de 8 líneas del expansor PCF8574 que
+                      00042 ; actúa como salida, el dato que le llega por el registro de trabajo W. El dato escrito
+                      00043 ; es recuperado finalmente en el registro W.
+                      00044 ;
+006A                  00045 PCF8574_Escribe
+006A   0090           00046         movwf   PCF8574_Dato            ; Guarda el dato a escribir.
+006B   202A           00047         call    I2C_EnviaStart          ; Envia condición de Start.
+006C   3042           00048         movlw   PCF8574_DireccionEscritura      ; Apunta al expansor que actúa como salida.
+006D   2038           00049         call    I2C_EnviaByte
+006E   0810           00050         movf    PCF8574_Dato,W          ; Recupera el valor del dato a enviar.
+006F   2038           00051         call    I2C_EnviaByte           ; Envía el dato.
+0070   2032           00052         call    I2C_EnviaStop           ; Termina.
+0071   0810           00053         movf    PCF8574_Dato,W          ; Recupera el valor del dato escrito.
+0072   0008           00054         return
+                      00055 
+                      00056 ;       ===================================================================
+                      00057 ;         Del libro "MICROCONTROLADOR PIC16F84. DESARROLLO DE PROYECTOS"
+                      00058 ;         E. Palacios, F. Remiro y L. López.
+                      00059 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00060 ;       ===================================================================
+                      00068         INCLUDE  <RETARDOS.INC>
+                      00001 ;**************************** Librería "RETARDOS.INC" *********************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Librería con múltiples subrutinas de retardos, desde 4 microsegundos hasta 20 segundos. 
+                      00010 ; Además se pueden implementar otras subrutinas muy fácilmente.
+                      00011 ;
+                      00012 ; Se han calculado para un sistema microcontrolador con un PIC trabajando con un cristal
+                      00013 ; de cuarzo a 4 MHz. Como cada ciclo máquina son 4 ciclos de reloj, resulta que cada
+                      00014 ; ciclo máquina tarda 4 x 1/4MHz = 1 µs.
+                      00015 ;
+                      00016 ; En los comentarios, "cm" significa "ciclos máquina".
+MPASM 03.50 Released                      I2C_EXPANSOR_01.ASM   10-26-2003  22:06:04         PAGE  7
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00017 ;
+                      00018 ; ZONA DE DATOS *********************************************************************
+                      00019 
+                      00020         CBLOCK
+  00000011            00021         R_ContA                         ; Contadores para los retardos.
+  00000012            00022         R_ContB
+  00000013            00023         R_ContC
+                      00024         ENDC
+                      00025 ;
+                      00026 ; RETARDOS de 4 hasta 10 microsegundos ---------------------------------------------------
+                      00027 ;
+                      00028 ; A continuación retardos pequeños teniendo en cuenta que para una frecuencia de 4 MHZ,
+                      00029 ; la llamada a subrutina "call" tarda 2 ciclos máquina, el retorno de subrutina
+                      00030 ; "return" toma otros 2 ciclos máquina y cada instrucción "nop" tarda 1 ciclo máquina.
+                      00031 ;
+0073                  00032 Retardo_10micros                                ; La llamada "call" aporta 2 ciclos máquina.
+0073   0000           00033         nop                             ; Aporta 1 ciclo máquina.
+0074   0000           00034         nop                             ; Aporta 1 ciclo máquina.
+0075   0000           00035         nop                             ; Aporta 1 ciclo máquina.
+0076   0000           00036         nop                             ; Aporta 1 ciclo máquina.
+0077   0000           00037         nop                             ; Aporta 1 ciclo máquina.
+0078                  00038 Retardo_5micros                         ; La llamada "call" aporta 2 ciclos máquina.
+0078   0000           00039         nop                             ; Aporta 1 ciclo máquina.
+0079                  00040 Retardo_4micros                         ; La llamada "call" aporta 2 ciclos máquina.
+0079   0008           00041         return                          ; El salto del retorno aporta 2 ciclos máquina.
+                      00042 ;
+                      00043 ; RETARDOS de 20 hasta 500 microsegundos ------------------------------------------------
+                      00044 ;
+007A                  00045 Retardo_500micros                               ; La llamada "call" aporta 2 ciclos máquina.
+007A   0000           00046         nop                             ; Aporta 1 ciclo máquina.
+007B   30A4           00047         movlw   d'164'                  ; Aporta 1 ciclo máquina. Este es el valor de "K".
+007C   2886           00048         goto    RetardoMicros           ; Aporta 2 ciclos máquina.
+007D                  00049 Retardo_200micros                               ; La llamada "call" aporta 2 ciclos máquina.
+007D   0000           00050         nop                             ; Aporta 1 ciclo máquina.
+007E   3040           00051         movlw   d'64'                   ; Aporta 1 ciclo máquina. Este es el valor de "K".
+007F   2886           00052         goto    RetardoMicros           ; Aporta 2 ciclos máquina.
+0080                  00053 Retardo_100micros                               ; La llamada "call" aporta 2 ciclos máquina.
+0080   301F           00054         movlw   d'31'                   ; Aporta 1 ciclo máquina. Este es el valor de "K".
+0081   2886           00055         goto    RetardoMicros           ; Aporta 2 ciclos máquina.
+0082                  00056 Retardo_50micros                                ; La llamada "call" aporta 2 ciclos máquina.
+0082   0000           00057         nop                             ; Aporta 1 ciclo máquina.
+0083   300E           00058         movlw   d'14'                   ; Aporta 1 ciclo máquina. Este es el valor de "K".
+0084   2886           00059         goto    RetardoMicros           ; Aporta 2 ciclos máquina.
+0085                  00060 Retardo_20micros                                ; La llamada "call" aporta 2 ciclos máquina.
+0085   3005           00061         movlw   d'5'                    ; Aporta 1 ciclo máquina. Este es el valor de "K".
+                      00062 ;
+                      00063 ; El próximo bloque "RetardoMicros" tarda:
+                      00064 ; 1 + (K-1) + 2 + (K-1)x2 + 2 = (2 + 3K) ciclos máquina.
+                      00065 ;
+0086                  00066 RetardoMicros
+0086   0091           00067         movwf   R_ContA                 ; Aporta 1 ciclo máquina.
+0087                  00068 Rmicros_Bucle
+0087   0B91           00069         decfsz  R_ContA,F               ; (K-1)x1 cm (cuando no salta) + 2 cm (al saltar).
+MPASM 03.50 Released                      I2C_EXPANSOR_01.ASM   10-26-2003  22:06:04         PAGE  8
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0088   2887           00070         goto    Rmicros_Bucle           ; Aporta (K-1)x2 ciclos máquina.
+0089   0008           00071         return                          ; El salto del retorno aporta 2 ciclos máquina.
+                      00072 ;
+                      00073 ;En total estas subrutinas tardan:
+                      00074 ; - Retardo_500micros:  2 + 1 + 1 + 2 + (2 + 3K) = 500 cm = 500 µs. (para K=164 y 4 MHz).
+                      00075 ; - Retardo_200micros:  2 + 1 + 1 + 2 + (2 + 3K) = 200 cm = 200 µs. (para K= 64 y 4 MHz).
+                      00076 ; - Retardo_100micros:  2     + 1 + 2 + (2 + 3K) = 100 cm = 100 µs. (para K= 31 y 4 MHz).
+                      00077 ; - Retardo_50micros :  2 + 1 + 1 + 2 + (2 + 3K) =  50 cm =  50 µs. (para K= 14 y 4 MHz).
+                      00078 ; - Retardo_20micros :  2     + 1     + (2 + 3K) =  20 cm =  20 µs. (para K=  5 y 4 MHz).
+                      00079 ;
+                      00080 ; RETARDOS de 1 ms hasta 200 ms. --------------------------------------------------------
+                      00081 ;
+008A                  00082 Retardo_200ms                           ; La llamada "call" aporta 2 ciclos máquina.
+008A   30C8           00083         movlw   d'200'                  ; Aporta 1 ciclo máquina. Este es el valor de "M".
+008B   2899           00084         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+008C                  00085 Retardo_100ms                           ; La llamada "call" aporta 2 ciclos máquina.
+008C   3064           00086         movlw   d'100'                  ; Aporta 1 ciclo máquina. Este es el valor de "M".
+008D   2899           00087         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+008E                  00088 Retardo_50ms                            ; La llamada "call" aporta 2 ciclos máquina.
+008E   3032           00089         movlw   d'50'                   ; Aporta 1 ciclo máquina. Este es el valor de "M".
+008F   2899           00090         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+0090                  00091 Retardo_20ms                            ; La llamada "call" aporta 2 ciclos máquina.
+0090   3014           00092         movlw   d'20'                   ; Aporta 1 ciclo máquina. Este es el valor de "M".
+0091   2899           00093         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+0092                  00094 Retardo_10ms                            ; La llamada "call" aporta 2 ciclos máquina.
+0092   300A           00095         movlw   d'10'                   ; Aporta 1 ciclo máquina. Este es el valor de "M".
+0093   2899           00096         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+0094                  00097 Retardo_5ms                             ; La llamada "call" aporta 2 ciclos máquina.
+0094   3005           00098         movlw   d'5'                    ; Aporta 1 ciclo máquina. Este es el valor de "M".
+0095   2899           00099         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+0096                  00100 Retardo_2ms                             ; La llamada "call" aporta 2 ciclos máquina.
+0096   3002           00101         movlw   d'2'                    ; Aporta 1 ciclo máquina. Este es el valor de "M".
+0097   2899           00102         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+0098                  00103 Retardo_1ms                             ; La llamada "call" aporta 2 ciclos máquina.
+0098   3001           00104         movlw   d'1'                    ; Aporta 1 ciclo máquina. Este es el valor de "M".
+                      00105 ;
+                      00106 ; El próximo bloque "Retardos_ms" tarda:
+                      00107 ; 1 + M + M + KxM + (K-1)xM + Mx2 + (K-1)Mx2 + (M-1) + 2 + (M-1)x2 + 2 =
+                      00108 ; = (2 + 4M + 4KM) ciclos máquina. Para K=249 y M=1 supone 1002 ciclos máquina
+                      00109 ; que a 4 MHz son 1002 µs = 1 ms.
+                      00110 ;
+0099                  00111 Retardos_ms
+0099   0092           00112         movwf   R_ContB                 ; Aporta 1 ciclo máquina.
+009A                  00113 R1ms_BucleExterno
+009A   30F9           00114         movlw   d'249'                  ; Aporta Mx1 ciclos máquina. Este es el valor de "K".
+009B   0091           00115         movwf   R_ContA                 ; Aporta Mx1 ciclos máquina.
+009C                  00116 R1ms_BucleInterno
+009C   0000           00117         nop                             ; Aporta KxMx1 ciclos máquina.
+009D   0B91           00118         decfsz  R_ContA,F               ; (K-1)xMx1 cm (cuando no salta) + Mx2 cm (al saltar).
+009E   289C           00119         goto    R1ms_BucleInterno               ; Aporta (K-1)xMx2 ciclos máquina.
+009F   0B92           00120         decfsz  R_ContB,F               ; (M-1)x1 cm (cuando no salta) + 2 cm (al saltar).
+00A0   289A           00121         goto    R1ms_BucleExterno       ; Aporta (M-1)x2 ciclos máquina.
+00A1   0008           00122         return                          ; El salto del retorno aporta 2 ciclos máquina.
+MPASM 03.50 Released                      I2C_EXPANSOR_01.ASM   10-26-2003  22:06:04         PAGE  9
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00123 ;
+                      00124 ;En total estas subrutinas tardan:
+                      00125 ; - Retardo_200ms:      2 + 1 + 2 + (2 + 4M + 4KM) = 200007 cm = 200 ms. (M=200 y K=249).
+                      00126 ; - Retardo_100ms:      2 + 1 + 2 + (2 + 4M + 4KM) = 100007 cm = 100 ms. (M=100 y K=249).
+                      00127 ; - Retardo_50ms :      2 + 1 + 2 + (2 + 4M + 4KM) =  50007 cm =  50 ms. (M= 50 y K=249).
+                      00128 ; - Retardo_20ms :      2 + 1 + 2 + (2 + 4M + 4KM) =  20007 cm =  20 ms. (M= 20 y K=249).
+                      00129 ; - Retardo_10ms :      2 + 1 + 2 + (2 + 4M + 4KM) =  10007 cm =  10 ms. (M= 10 y K=249).
+                      00130 ; - Retardo_5ms  :      2 + 1 + 2 + (2 + 4M + 4KM) =   5007 cm =   5 ms. (M=  5 y K=249).
+                      00131 ; - Retardo_2ms  :      2 + 1 + 2 + (2 + 4M + 4KM) =   2007 cm =   2 ms. (M=  2 y K=249).
+                      00132 ; - Retardo_1ms  :      2 + 1     + (2 + 4M + 4KM) =   1005 cm =   1 ms. (M=  1 y K=249).
+                      00133 ;
+                      00134 ; RETARDOS de 0.5 hasta 20 segundos ---------------------------------------------------
+                      00135 ;
+00A2                  00136 Retardo_20s                             ; La llamada "call" aporta 2 ciclos máquina.
+00A2   30C8           00137         movlw   d'200'                  ; Aporta 1 ciclo máquina. Este es el valor de "N".
+00A3   28AD           00138         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+00A4                  00139 Retardo_10s                             ; La llamada "call" aporta 2 ciclos máquina.
+00A4   3064           00140         movlw   d'100'                  ; Aporta 1 ciclo máquina. Este es el valor de "N".
+00A5   28AD           00141         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+00A6                  00142 Retardo_5s                              ; La llamada "call" aporta 2 ciclos máquina.
+00A6   3032           00143         movlw   d'50'                   ; Aporta 1 ciclo máquina. Este es el valor de "N".
+00A7   28AD           00144         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+00A8                  00145 Retardo_2s                              ; La llamada "call" aporta 2 ciclos máquina.
+00A8   3014           00146         movlw   d'20'                   ; Aporta 1 ciclo máquina. Este es el valor de "N".
+00A9   28AD           00147         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+00AA                  00148 Retardo_1s                              ; La llamada "call" aporta 2 ciclos máquina.
+00AA   300A           00149         movlw   d'10'                   ; Aporta 1 ciclo máquina. Este es el valor de "N".
+00AB   28AD           00150         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+00AC                  00151 Retardo_500ms                           ; La llamada "call" aporta 2 ciclos máquina.
+00AC   3005           00152         movlw   d'5'                    ; Aporta 1 ciclo máquina. Este es el valor de "N".
+                      00153 ;
+                      00154 ; El próximo bloque "Retardo_1Decima" tarda:
+                      00155 ; 1 + N + N + MxN + MxN + KxMxN + (K-1)xMxN + MxNx2 + (K-1)xMxNx2 +
+                      00156 ;   + (M-1)xN + Nx2 + (M-1)xNx2 + (N-1) + 2 + (N-1)x2 + 2 =
+                      00157 ; = (2 + 4M + 4MN + 4KM) ciclos máquina. Para K=249, M=100 y N=1 supone 100011
+                      00158 ; ciclos máquina que a 4 MHz son 100011 µs = 100 ms = 0,1 s = 1 décima de segundo.
+                      00159 ;
+00AD                  00160 Retardo_1Decima
+00AD   0093           00161         movwf   R_ContC                 ; Aporta 1 ciclo máquina.
+00AE                  00162 R1Decima_BucleExterno2
+00AE   3064           00163         movlw   d'100'                  ; Aporta Nx1 ciclos máquina. Este es el valor de "M".
+00AF   0092           00164         movwf   R_ContB                 ; Aporta Nx1 ciclos máquina.
+00B0                  00165 R1Decima_BucleExterno
+00B0   30F9           00166         movlw   d'249'                  ; Aporta MxNx1 ciclos máquina. Este es el valor de "K".
+00B1   0091           00167         movwf   R_ContA                 ; Aporta MxNx1 ciclos máquina.
+00B2                  00168 R1Decima_BucleInterno          
+00B2   0000           00169         nop                             ; Aporta KxMxNx1 ciclos máquina.
+00B3   0B91           00170         decfsz  R_ContA,F               ; (K-1)xMxNx1 cm (si no salta) + MxNx2 cm (al saltar).
+00B4   28B2           00171         goto    R1Decima_BucleInterno   ; Aporta (K-1)xMxNx2 ciclos máquina.
+00B5   0B92           00172         decfsz  R_ContB,F               ; (M-1)xNx1 cm (cuando no salta) + Nx2 cm (al saltar).
+00B6   28B0           00173         goto    R1Decima_BucleExterno   ; Aporta (M-1)xNx2 ciclos máquina.
+00B7   0B93           00174         decfsz  R_ContC,F               ; (N-1)x1 cm (cuando no salta) + 2 cm (al saltar).
+00B8   28AE           00175         goto    R1Decima_BucleExterno2  ; Aporta (N-1)x2 ciclos máquina.
+MPASM 03.50 Released                      I2C_EXPANSOR_01.ASM   10-26-2003  22:06:04         PAGE 10
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+00B9   0008           00176         return                          ; El salto del retorno aporta 2 ciclos máquina.
+                      00177 ;
+                      00178 ;En total estas subrutinas tardan:
+                      00179 ; - Retardo_20s:        2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) = 20000807 cm = 20 s.
+                      00180 ;                       (N=200, M=100 y K=249).
+                      00181 ; - Retardo_10s:        2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) = 10000407 cm = 10 s.
+                      00182 ;                       (N=100, M=100 y K=249).
+                      00183 ; - Retardo_5s:         2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) =  5000207 cm =  5 s.
+                      00184 ;                       (N= 50, M=100 y K=249).
+                      00185 ; - Retardo_2s:         2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) =  2000087 cm =  2 s.
+                      00186 ;                       (N= 20, M=100 y K=249).
+                      00187 ; - Retardo_1s:         2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) =  1000047 cm =  1 s.
+                      00188 ;                       (N= 10, M=100 y K=249).
+                      00189 ; - Retardo_500ms:      2 + 1     + (2 + 4N + 4MN + 4KMN) =   500025 cm = 0,5 s.
+                      00190 ;                       (N=  5, M=100 y K=249).
+                      00191 
+                      00192 ;       ===================================================================
+                      00193 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00194 ;         E. Palacios, F. Remiro y L. López.
+                      00195 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00196 ;       ===================================================================
+                      00197 
+                      00198 
+                      00199 
+                      00200 
+                      00069         END
+MPASM 03.50 Released                      I2C_EXPANSOR_01.ASM   10-26-2003  22:06:04         PAGE 11
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+C                                 00000000
+DC                                00000001
+Dato                              0000000C
+EEADR                             00000009
+EECON1                            00000088
+EECON2                            00000089
+EEDATA                            00000008
+EEIE                              00000006
+EEIF                              00000004
+F                                 00000001
+FSR                               00000004
+GIE                               00000007
+I2C_ContadorBits                  0000000D
+I2C_Dato                          0000000E
+I2C_EnviaBit                      0000003B
+I2C_EnviaByte                     00000038
+I2C_EnviaCero                     0000003E
+I2C_EnviaStart                    0000002A
+I2C_EnviaStop                     00000032
+I2C_EnviaUno                      00000040
+I2C_Flags                         0000000F
+I2C_FlancoSCL                     00000041
+I2C_LeeBit                        00000050
+I2C_LeeByte                       0000004D
+I2C_UltimoByteLeer                I2C_Flags,0
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+Inicio                            00000005
+NOT_PD                            00000003
+NOT_RBPU                          00000007
+NOT_TO                            00000004
+OPTION_REG                        00000081
+PCB8574_INT                       PORTB,0
+PCF8574_Dato                      00000010
+PCF8574_DireccionEscritura        00000042
+PCF8574_DireccionLectura          00000041
+PCF8574_Escribe                   0000006A
+PCF8574_Lee                       00000061
+PCL                               00000002
+PCLATH                            0000000A
+PORTA                             00000005
+PORTB                             00000006
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+Principal                         0000000D
+R1Decima_BucleExterno             000000B0
+R1Decima_BucleExterno2            000000AE
+MPASM 03.50 Released                      I2C_EXPANSOR_01.ASM   10-26-2003  22:06:04         PAGE 12
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+R1Decima_BucleInterno             000000B2
+R1ms_BucleExterno                 0000009A
+R1ms_BucleInterno                 0000009C
+RBIE                              00000003
+RBIF                              00000000
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+R_ContA                           00000011
+R_ContB                           00000012
+R_ContC                           00000013
+RetardoMicros                     00000086
+Retardo_100micros                 00000080
+Retardo_100ms                     0000008C
+Retardo_10micros                  00000073
+Retardo_10ms                      00000092
+Retardo_10s                       000000A4
+Retardo_1Decima                   000000AD
+Retardo_1ms                       00000098
+Retardo_1s                        000000AA
+Retardo_200micros                 0000007D
+Retardo_200ms                     0000008A
+Retardo_20micros                  00000085
+Retardo_20ms                      00000090
+Retardo_20s                       000000A2
+Retardo_2ms                       00000096
+Retardo_2s                        000000A8
+Retardo_4micros                   00000079
+Retardo_500micros                 0000007A
+Retardo_500ms                     000000AC
+Retardo_50micros                  00000082
+Retardo_50ms                      0000008E
+Retardo_5micros                   00000078
+Retardo_5ms                       00000094
+Retardo_5s                        000000A6
+Retardos_ms                       00000099
+Rmicros_Bucle                     00000087
+SCL                               PORTA,3
+SCL_AltaImpedancia                00000024
+SCL_Bajo                          0000001F
+SCL_EsperaNivelAlto               00000027
+SDA                               PORTA,4
+SDA_AltaImpedancia                0000001B
+SDA_Bajo                          00000016
+STATUS                            00000003
+ServicioInterrupcion              0000000F
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+TMR0                              00000001
+TRISA                             00000085
+TRISB                             00000086
+MPASM 03.50 Released                      I2C_EXPANSOR_01.ASM   10-26-2003  22:06:04         PAGE 13
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+W                                 00000000
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_CP_OFF                           00003FFF
+_CP_ON                            0000000F
+_HS_OSC                           00003FFE
+_LP_OSC                           00003FFC
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC                           00003FFF
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FFD
+__16F84A                          00000001
+
+
+MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
+
+0000 : X---XXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0040 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0080 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXX------
+2000 : -------X-------- ---------------- ---------------- ----------------
+
+All other memory blocks unused.
+
+Program Memory Words Used:   183
+Program Memory Words Free:   841
+
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :     2 reported,     0 suppressed
+
+

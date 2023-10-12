@@ -1,0 +1,46 @@
+MPLINK 4.49, Linker
+Linker Map File - Created Sat Jun 10 20:56:59 2023
+
+                                 Section Info
+                  Section       Type    Address   Location Size(Bytes)
+                ---------  ---------  ---------  ---------  ---------
+                   .org_0       code   0x000000    program   0x000000
+                   .org_1       code   0x000000    program   0x000034
+.config_2007_SUBRUTINAS_01.O       code   0x002007    program   0x000002
+
+
+
+                              Program Memory Usage 
+                               Start         End      
+                           ---------   ---------      
+                            0x000000    0x000019      
+                            0x002007    0x002007      
+            27 out of 1094 program addresses used, program memory utilization is 2%
+
+
+
+                              Symbols - Sorted by Name
+                     Name    Address   Location    Storage File                     
+                ---------  ---------  ---------  --------- ---------                
+                BIN_a_BCD   0x000007    program     static E:\00.-MPLAB\00.-PIC16F84A\SUBRUTINAS_01\Subrutinas_01.asm
+              Fin_BIN_BCD   0x000017    program     static E:\00.-MPLAB\00.-PIC16F84A\SUBRUTINAS_01\Subrutinas_01.asm
+       IncrementaCentenas   0x000014    program     static E:\00.-MPLAB\00.-PIC16F84A\SUBRUTINAS_01\Subrutinas_01.asm
+        IncrementaDecenas   0x00000e    program     static E:\00.-MPLAB\00.-PIC16F84A\SUBRUTINAS_01\Subrutinas_01.asm
+                   Inicio   0x000000    program     static E:\00.-MPLAB\00.-PIC16F84A\SUBRUTINAS_01\Subrutinas_01.asm
+                Principal   0x000003    program     static E:\00.-MPLAB\00.-PIC16F84A\SUBRUTINAS_01\Subrutinas_01.asm
+                  Resta10   0x00000a    program     static E:\00.-MPLAB\00.-PIC16F84A\SUBRUTINAS_01\Subrutinas_01.asm
+
+
+
+                              Symbols - Sorted by Address
+                     Name    Address   Location    Storage File                     
+                ---------  ---------  ---------  --------- ---------                
+                   Inicio   0x000000    program     static E:\00.-MPLAB\00.-PIC16F84A\SUBRUTINAS_01\Subrutinas_01.asm
+                Principal   0x000003    program     static E:\00.-MPLAB\00.-PIC16F84A\SUBRUTINAS_01\Subrutinas_01.asm
+                BIN_a_BCD   0x000007    program     static E:\00.-MPLAB\00.-PIC16F84A\SUBRUTINAS_01\Subrutinas_01.asm
+                  Resta10   0x00000a    program     static E:\00.-MPLAB\00.-PIC16F84A\SUBRUTINAS_01\Subrutinas_01.asm
+        IncrementaDecenas   0x00000e    program     static E:\00.-MPLAB\00.-PIC16F84A\SUBRUTINAS_01\Subrutinas_01.asm
+       IncrementaCentenas   0x000014    program     static E:\00.-MPLAB\00.-PIC16F84A\SUBRUTINAS_01\Subrutinas_01.asm
+              Fin_BIN_BCD   0x000017    program     static E:\00.-MPLAB\00.-PIC16F84A\SUBRUTINAS_01\Subrutinas_01.asm
+
+

@@ -1,0 +1,54 @@
+MPLINK 4.49, Linker
+Linker Map File - Created Thu Jun 08 21:10:53 2023
+
+                                 Section Info
+                  Section       Type    Address   Location Size(Bytes)
+                ---------  ---------  ---------  ---------  ---------
+                   .org_0       code   0x000000    program   0x000000
+                   .org_1       code   0x000000    program   0x000044
+.config_2007_INDEXADO_02.O       code   0x002007    program   0x000002
+
+
+
+                              Program Memory Usage 
+                               Start         End      
+                           ---------   ---------      
+                            0x000000    0x000021      
+                            0x002007    0x002007      
+            35 out of 1094 program addresses used, program memory utilization is 3%
+
+
+
+                              Symbols - Sorted by Name
+                     Name    Address   Location    Storage File                     
+                ---------  ---------  ---------  --------- ---------                
+             ActivaSalida   0x000020    program     static E:\00.-MPLAB\00.-PIC16F84A\INDEXADO_02\Indexado_02.asm
+           Configuracion0   0x000011    program     static E:\00.-MPLAB\00.-PIC16F84A\INDEXADO_02\Indexado_02.asm
+           Configuracion1   0x000013    program     static E:\00.-MPLAB\00.-PIC16F84A\INDEXADO_02\Indexado_02.asm
+           Configuracion2   0x000015    program     static E:\00.-MPLAB\00.-PIC16F84A\INDEXADO_02\Indexado_02.asm
+           Configuracion3   0x000017    program     static E:\00.-MPLAB\00.-PIC16F84A\INDEXADO_02\Indexado_02.asm
+           Configuracion4   0x000019    program     static E:\00.-MPLAB\00.-PIC16F84A\INDEXADO_02\Indexado_02.asm
+           Configuracion5   0x00001b    program     static E:\00.-MPLAB\00.-PIC16F84A\INDEXADO_02\Indexado_02.asm
+           Configuracion6   0x00001d    program     static E:\00.-MPLAB\00.-PIC16F84A\INDEXADO_02\Indexado_02.asm
+           Configuracion7   0x00001f    program     static E:\00.-MPLAB\00.-PIC16F84A\INDEXADO_02\Indexado_02.asm
+                   Inicio   0x000000    program     static E:\00.-MPLAB\00.-PIC16F84A\INDEXADO_02\Indexado_02.asm
+                Principal   0x000006    program     static E:\00.-MPLAB\00.-PIC16F84A\INDEXADO_02\Indexado_02.asm
+
+
+
+                              Symbols - Sorted by Address
+                     Name    Address   Location    Storage File                     
+                ---------  ---------  ---------  --------- ---------                
+                   Inicio   0x000000    program     static E:\00.-MPLAB\00.-PIC16F84A\INDEXADO_02\Indexado_02.asm
+                Principal   0x000006    program     static E:\00.-MPLAB\00.-PIC16F84A\INDEXADO_02\Indexado_02.asm
+           Configuracion0   0x000011    program     static E:\00.-MPLAB\00.-PIC16F84A\INDEXADO_02\Indexado_02.asm
+           Configuracion1   0x000013    program     static E:\00.-MPLAB\00.-PIC16F84A\INDEXADO_02\Indexado_02.asm
+           Configuracion2   0x000015    program     static E:\00.-MPLAB\00.-PIC16F84A\INDEXADO_02\Indexado_02.asm
+           Configuracion3   0x000017    program     static E:\00.-MPLAB\00.-PIC16F84A\INDEXADO_02\Indexado_02.asm
+           Configuracion4   0x000019    program     static E:\00.-MPLAB\00.-PIC16F84A\INDEXADO_02\Indexado_02.asm
+           Configuracion5   0x00001b    program     static E:\00.-MPLAB\00.-PIC16F84A\INDEXADO_02\Indexado_02.asm
+           Configuracion6   0x00001d    program     static E:\00.-MPLAB\00.-PIC16F84A\INDEXADO_02\Indexado_02.asm
+           Configuracion7   0x00001f    program     static E:\00.-MPLAB\00.-PIC16F84A\INDEXADO_02\Indexado_02.asm
+             ActivaSalida   0x000020    program     static E:\00.-MPLAB\00.-PIC16F84A\INDEXADO_02\Indexado_02.asm
+
+

@@ -1,0 +1,913 @@
+MPASM 03.50 Released                             RS232_03.ASM   10-12-2000  19:57:27         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;************************************ RS232_03.asm **************************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Lo que se escriba por el teclado se visualiza en el LCD y en el monitor del ordenador,
+                      00010 ; pero en este último se visualiza un sólo carácter por línea.
+                      00011 ;
+                      00012 ; ZONA DE DATOS **********************************************************************
+                      00013 
+2007   3FF1           00014         __CONFIG   _CP_OFF &  _WDT_OFF & _PWRTE_ON & _XT_OSC
+                      00015         LIST       P=16F84A
+                      00016         INCLUDE  <P16F84A.INC>
+                      00001         LIST
+                      00002 ; P16F84A.INC  Standard Header File, Version 2.00    Microchip Technology, Inc.
+                      00134         LIST
+                      00017 
+                      00018         CBLOCK  0x0C
+  0000000C            00019         GuardaDato
+                      00020         ENDC
+                      00021 
+  0000000D            00022 RetornoCarro    EQU     .13             ; Código de tecla "Enter" o "Retorno de Carro".
+  0000000A            00023 CambioLinea     EQU     .10             ; Código para el cambio de línea.
+                      00024 
+                      00025 ; ZONA DE CÓDIGOS ********************************************************************
+                      00026 
+0000                  00027         ORG     0
+0000                  00028 Inicio
+0000   2033           00029         call    LCD_Inicializa
+0001   200C           00030         call    RS232_Inicializa
+0002                  00031 Principal
+0002   2011           00032         call    RS232_LeeDato           ; Espera recibir un carácter.
+0003   008C           00033         movwf   GuardaDato              ; Guarda el dato recibido.
+0004   2077           00034         call    LCD_Caracter            ; Lo visualiza.
+0005   080C           00035         movf    GuardaDato,W            ; Y ahora lo reenvía otra vez al ordenador.
+0006   2022           00036         call    RS232_EnviaDato
+0007   300D           00037         movlw   RetornoCarro            ; Ahora el cursor se sitúa al principio de la
+0008   2022           00038         call    RS232_EnviaDato         ; línea siguiente en la pantalla del ordenador.
+0009   300A           00039         movlw   CambioLinea
+000A   2022           00040         call    RS232_EnviaDato
+000B   2802           00041         goto    Principal
+                      00042 
+                      00043         INCLUDE  <RS232.INC>
+                      00001 ;***************************** Librería "RS232.INC" *************************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+MPASM 03.50 Released                             RS232_03.ASM   10-12-2000  19:57:27         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00008 ;
+                      00009 ; Estas subrutinas permiten realizar las tareas básicas de control de la transmisión
+                      00010 ; seríe asincrona según normas RS-232.
+                      00011 ;
+                      00012 ; Los parámetros adoptados para la comunicación son los siguientes:
+                      00013 ; - Velocidad de transmisión de 9600 baudios. La duración de cada bit será 104 µs.
+                      00014 ; - Un bit de inicio ó Start a nivel bajo.
+                      00015 ; - Dato de 8 bits.
+                      00016 ; - Sin paridad.
+                      00017 ; - Dos bits de final ó Stop a nivel alto.
+                      00018 ;
+                      00019 ; El tiempo entre bit y bit  debe coincidir con el período de la señal leída o enviada.
+                      00020 ; Como la velocidad de transmisión ó recepción es de 9600 baudios, el período será:
+                      00021 ; 1/9600Baudios= 104 µs. Se utilizará pues la subrutina "Retardos_100micros".
+                      00022 
+                      00023         CBLOCK
+  0000000D            00024         RS232_ContadorBits
+  0000000E            00025         RS232_Dato
+                      00026         ENDC
+                      00027 
+                      00028 #DEFINE  RS232_Entrada  PORTA,3         ; Línea por la que se reciben los datos.
+                      00029 #DEFINE  RS232_Salida   PORTA,4         ; Línea por la que se envían los datos.
+                      00030 ;
+                      00031 ; Subrutina "RS232_Inicializa" -------------------------------------------------------------
+                      00032 ;
+                      00033 ; Configura las líneas de salida y entrada del microcontrolador.
+                      00034 
+000C                  00035 RS232_Inicializa
+000C   1683           00036         bsf     STATUS,RP0
+000D   1585           00037         bsf     RS232_Entrada           ; Esta línea se configura como entrada.
+000E   1205           00038         bcf     RS232_Salida            ; Esta línea se configura como salida.
+000F   1283           00039         bcf     STATUS,RP0
+0010   0008           00040         return
+                      00041 
+                      00042 ; Subrutina "RS232_LeeDato" -------------------------------------------------------------
+                      00043 ;
+                      00044 ; El microcontrolador lee el dato por la línea de entrada comenzando por el bit de menor
+                      00045 ; peso. El dato leído se envía finalmente en el registro de trabajo W.
+                      00046 ;
+                      00047 ; El ordenador parte siempre de un nivel alto, que es el estado que tiene cuando no 
+                      00048 ; envía información. La secuencia utilizada es:
+                      00049 ; 1º    Espera que se ejecute el pulso negativo del bit Start, o flanco de bajada.
+                      00050 ; 2º    Deja pasar un tiempo una y media veces mayor que el periodo de transmisión para
+                      00051 ;       saltarse el bit de Start y lee el primer bit en su mitad.
+                      00052 ; 3º    Lee el resto de los bits de datos, esperando un tiempo igual a la duración del
+                      00053 ;       período entre lectura y lectura para testearlos en mitad del bit.
+                      00054 ;
+                      00055 ; Salida: En el registro de trabajo W el byte leído.
+                      00056 
+0011                  00057 RS232_LeeDato
+0011   3008           00058         movlw   d'8'                    ; Número de bits a recibir.
+0012   008D           00059         movwf   RS232_ContadorBits
+0013                  00060 RS232_EsperaBitStart
+MPASM 03.50 Released                             RS232_03.ASM   10-12-2000  19:57:27         PAGE  3
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0013   1985           00061         btfsc   RS232_Entrada           ; Lee la entrada y espera a que sea "0".
+0014   2813           00062         goto    RS232_EsperaBitStart    ; No, pues espera el nivel bajo.
+0015   20C4           00063         call    Retardo_100micros               ; El primer bit debe leerlo un tiempo igual a una
+0016   20C6           00064         call    Retardo_50micros                ; vez y media el periodo de transmisión.
+0017                  00065 RS232_LeeBit
+0017   1003           00066         bcf     STATUS,C                ; Ahora lee el pin. En principio supone que es 0.
+0018   1985           00067         btfsc   RS232_Entrada           ; ¿Realmente es cero?.
+0019   1403           00068         bsf     STATUS,C                ; No, pues cambia a uno.
+001A   0C8E           00069         rrf     RS232_Dato,F            ; Introduce el bit en el registro de lectura.
+001B   20C4           00070         call    Retardo_100micros               ; Los siguientes bits los lee un período más tarde.
+001C   0B8D           00071         decfsz  RS232_ContadorBits,F    ; Comprueba que es el último bit.
+001D   2817           00072         goto    RS232_LeeBit            ; Si no es el último bit, pasa a leer el siguiente.
+001E   20C1           00073         call    Retardo_200micros               ; Espera un tiempo igual al los 2 bits de "Stop".
+001F   080E           00074         movf    RS232_Dato,W            ; El resultado en el registro W.
+0020   0008           00075         return  
+                      00076 
+                      00077 ; Subrutinas "RS232_EnviaDato" y "RS232_EnviaNúmero" -------------------------------------
+                      00078 ;
+                      00079 ; El microcontrolador envía un dato por la línea de salida comenzando por el bit de menor
+                      00080 ; peso. En dato enviado será el que le llegue a través del registro de trabajo W.
+                      00081 ; 1º.   Envía un "0" durante un tiempo igual al período de la velocidad de transmisión.
+                      00082 ;       Este es el bit de "Start".
+                      00083 ; 2º.   Envía el bit correspondiente:
+                      00084 ;       - Si va a enviar un "0" permanece en bajo durante el período correspondiente.
+                      00085 ;       - Si va a escribir un "1" permanece en alto durante el período correspondiente.
+                      00086 ; 3º.   Envía dos bits "1" durante un tiempo igual al período de la velocidad de 
+                      00087 ;       transmisión cada uno. Estos son los dos bits de "Stop".
+                      00088 ;
+                      00089 ; Entrada:      En (W) el dato a enviar.
+                      00090 
+0021                  00091 RS232_EnviaNumero                       ; Envía el código ASCII de un número.
+0021   3E30           00092         addlw   '0'                     ; Lo pasa a código ASCII sumándole el ASCII del 0.
+0022                  00093 RS232_EnviaDato
+0022   008E           00094         movwf   RS232_Dato              ; Guarda el contenido del byte a transmitir.
+0023   3008           00095         movlw   d'8'                    ; Este es el número de bits a transmitir.
+0024   008D           00096         movwf   RS232_ContadorBits
+0025   1205           00097         bcf     RS232_Salida            ; Bit de Start.
+0026   20C4           00098         call    Retardo_100micros
+0027                  00099 RS232_EnviaBit                          ; Comienza a enviar datos.
+0027   0C8E           00100         rrf     RS232_Dato,F            ; Lleva el bit que se quiere enviar al Carry para
+0028   1C03           00101         btfss   STATUS,C                ; deducir su valor. ¿Es un "1" el bit a transmitir?.
+0029   282C           00102         goto    RS232_EnviaCero         ; No, pues envía un "0".
+002A                  00103 RS232_EnviaUno
+002A   1605           00104         bsf     RS232_Salida            ; Transmite un "1".
+002B   282D           00105         goto    RS232_FinEnviaBit
+002C                  00106 RS232_EnviaCero
+002C   1205           00107         bcf     RS232_Salida            ; Transmite un "0".
+002D                  00108 RS232_FinEnviaBit
+002D   20C4           00109         call    Retardo_100micros               ; Este es el tiempo que estará en alto o bajo.
+002E   0B8D           00110         decfsz  RS232_ContadorBits,F    ; Comprueba que es el último bit.
+002F   2827           00111         goto    RS232_EnviaBit          ; Como no es el último bit repite la operación.
+0030   1605           00112         bsf     RS232_Salida            ; Envía dos bits de Stop.
+0031   20C1           00113         call    Retardo_200micros
+MPASM 03.50 Released                             RS232_03.ASM   10-12-2000  19:57:27         PAGE  4
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0032   0008           00114         return
+                      00115         
+                      00116 ;       ===================================================================
+                      00117 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00118 ;         E. Palacios, F. Remiro y L. López.
+                      00119 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00120 ;       ===================================================================
+                      00044         INCLUDE  <LCD_4BIT.INC>
+                      00001 ;**************************** Librería "LCD_4BIT.INC" ***********************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Estas subrutinas permiten realizar las tareas básicas de control de un módulo LCD de 2
+                      00010 ; líneas por 16 caracteres, compatible con el modelo LM016L.
+                      00011 ;
+                      00012 ; El visualizador LCD está conectado al Puerto B del PIC mediante un bus de 4 bits. Las
+                      00013 ; conexiones son:
+                      00014 ;    -  Las 4 líneas superiores del módulo LCD, pines <DB7:DB4>  se conectan a las 4
+                      00015 ;       líneas superiores del Puerto B del PIC, pines <RB7:RB4>.
+                      00016 ;    -  Pin RS del LCD a la línea RA0 del PIC.
+                      00017 ;    -  Pin R/W del LCD a la línea RA1 del PIC, o a masa.
+                      00018 ;    -  Pin Enable del LCD a la línea RA2 del PIC.
+                      00019 ;
+                      00020 ; Se utilizan llamadas a subrutinas de retardo de tiempo localizadas en la librería RETARDOS.INC.
+                      00021 ;
+                      00022 ; ZONA DE DATOS *********************************************************************
+                      00023 
+                      00024         CBLOCK
+  0000000F            00025         LCD_Dato
+  00000010            00026         LCD_GuardaDato
+  00000011            00027         LCD_GuardaTRISB
+  00000012            00028         LCD_Auxiliar1
+  00000013            00029         LCD_Auxiliar2
+                      00030         ENDC
+                      00031 
+  00000010            00032 LCD_CaracteresPorLinea  EQU     .16     ; Número de caracteres por línea de la pantalla.
+                      00033 
+                      00034 #DEFINE  LCD_PinRS      PORTA,0
+                      00035 #DEFINE  LCD_PinRW      PORTA,1
+                      00036 #DEFINE  LCD_PinEnable  PORTA,2
+                      00037 #DEFINE  LCD_BusDatos   PORTB
+                      00038 
+                      00039 ; Subrutina "LCD_Inicializa" ------------------------------------------------------------
+                      00040 ;
+                      00041 ; Inicialización del módulo LCD: Configura funciones del LCD, produce reset por software,
+                      00042 ; borra memoria y enciende pantalla. El fabricante especifica que para garantizar la
+                      00043 ; configuración inicial hay que hacerla como sigue:
+                      00044 ;
+0033                  00045 LCD_Inicializa
+MPASM 03.50 Released                             RS232_03.ASM   10-12-2000  19:57:27         PAGE  5
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0033   1683           00046         bsf     STATUS,RP0              ; Configura las líneas conectadas al pines RS,
+0034   1005           00047         bcf     LCD_PinRS               ; R/W y E.
+0035   1105           00048         bcf     LCD_PinEnable
+0036   1085           00049         bcf     LCD_PinRW
+0037   1283           00050         bcf     STATUS,RP0
+0038   1085           00051         bcf     LCD_PinRW               ; En caso de que esté conectado, le indica
+                      00052                                         ; que se va a escribir en el LCD.
+0039   1105           00053         bcf     LCD_PinEnable           ; Impide funcionamiento del LCD, poniendo E=0.
+003A   1005           00054         bcf     LCD_PinRS               ; Activa el Modo Comando, poniendo RS=0.
+003B   20D4           00055         call    Retardo_20ms
+003C   3030           00056         movlw   b'00110000'     
+003D   204B           00057         call    LCD_EscribeLCD          ; Escribe el dato en el LCD.
+003E   20D8           00058         call    Retardo_5ms     
+003F   3030           00059         movlw   b'00110000'     
+0040   204B           00060         call    LCD_EscribeLCD
+0041   20C1           00061         call    Retardo_200micros
+0042   3030           00062         movlw   b'00110000'     
+0043   204B           00063         call    LCD_EscribeLCD
+0044   3020           00064         movlw   b'00100000'             ; Interface de 4 bits.
+0045   204B           00065         call    LCD_EscribeLCD
+                      00066 
+                      00067 ; Ahora configura el resto de los parámetros: 
+                      00068 
+0046   2074           00069         call    LCD_2Lineas4Bits5x7     ; LCD de 2 líneas y caracteres de 5x7 puntos.
+0047   2072           00070         call    LCD_Borra               ; Pantalla encendida y limpia. Cursor al principio
+0048   2070           00071         call    LCD_CursorOFF           ; de la línea 1. Cursor apagado.
+0049   2062           00072         call    LCD_CursorIncr          ; Cursor en modo incrementar.
+004A   0008           00073         return
+                      00074 
+                      00075 ; Subrutina "LCD_EscribeLCD" -----------------------------------------------------------
+                      00076 ;
+                      00077 ; Envía el dato del registro de trabajo W al bus de dato y produce un pequeño pulso en el
+                      00078 ; pin "Enable" del LCD. Para no alterar el contenido de las líneas de la parte baja del Puerto B
+                      00079 ; que no son utilizadas para el LCD (pines RB3.. RB0), primero se lee estas líneas y después
+                      00080 ; se vuelve a enviar este dato sin cambiarlo.
+                      00081 
+004B                  00082 LCD_EscribeLCD
+004B   39F0           00083         andlw   b'11110000'             ; Se queda con el nibble alto del dato que es el
+004C   008F           00084         movwf   LCD_Dato                ; que hay que enviar y lo guarda.
+004D   0806           00085         movf    LCD_BusDatos,W          ; Lee la información actual de la parte baja
+004E   390F           00086         andlw   b'00001111'             ; del Puerto B, que no se debe alterar.
+004F   048F           00087         iorwf   LCD_Dato,F              ; Enviará la parte alta del dato de entrada
+                      00088                                         ; y en la parte baja lo que había antes.
+0050   1683           00089         bsf     STATUS,RP0              ; Acceso al Banco 1.
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0051   0806           00090         movf    TRISB,W         ; Guarda la configuración que tenía antes TRISB.
+0052   0091           00091         movwf   LCD_GuardaTRISB
+0053   300F           00092         movlw   b'00001111'             ; Las 4 líneas inferiores del Puerto B se dejan 
+0054   0586           00093         andwf   PORTB,F                 ; como estaban y las 4 superiores como salida.
+0055   1283           00094         bcf     STATUS,RP0              ; Acceso al Banco 0.
+                      00095 ;
+0056   080F           00096         movf    LCD_Dato,W              ; Recupera el dato a enviar.
+0057   0086           00097         movwf   LCD_BusDatos            ; Envía el dato al módulo LCD.
+MPASM 03.50 Released                             RS232_03.ASM   10-12-2000  19:57:27         PAGE  6
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0058   1505           00098         bsf     LCD_PinEnable           ; Permite funcionamiento del LCD, mediante un pequeño
+0059   1105           00099         bcf     LCD_PinEnable           ; pulso y termina impidiendo el funcionamiento del LCD.
+005A   1C05           00100         btfss   LCD_PinRS               ; Debe garantizar una correcta escritura manteniendo 
+005B   20DA           00101         call    Retardo_2ms             ; 2 ms en modo comando y 50 µs en modo cáracter.
+005C   20C6           00102         call    Retardo_50micros
+005D   1683           00103         bsf     STATUS,RP0              ; Acceso al Banco 1. Restaura el antiguo valor en
+005E   0811           00104         movf    LCD_GuardaTRISB,W       ; la configuración del Puerto B.
+005F   0086           00105         movwf   PORTB                   ; Realmente es TRISB.
+0060   1283           00106         bcf     STATUS,RP0              ; Acceso al Banco 0.
+0061   0008           00107         return
+                      00108 
+                      00109 ; Subrutinas variadas para el control del módulo LCD -----------------------------------------
+                      00110 ;
+                      00111 ;Los comandos que pueden ser ejecutados son:
+                      00112 ;
+0062                  00113 LCD_CursorIncr                          ; Cursor en modo incrementar.
+0062   3006           00114         movlw   b'00000110'
+0063   2875           00115         goto    LCD_EnviaComando
+0064                  00116 LCD_Linea1                              ; Cursor al principio de la Línea 1.
+0064   3080           00117         movlw   b'10000000'             ; Dirección 00h de la DDRAM
+0065   2875           00118         goto    LCD_EnviaComando
+0066                  00119 LCD_Linea2                              ; Cursor al principio de la Línea 2.
+0066   30C0           00120         movlw   b'11000000'             ; Dirección 40h de la DDRAM
+0067   2875           00121         goto    LCD_EnviaComando
+0068                  00122 LCD_PosicionLinea1                      ; Cursor a posición de la Línea 1, a partir de la
+0068   3880           00123         iorlw   b'10000000'             ; dirección 00h de la DDRAM más el valor del
+0069   2875           00124         goto    LCD_EnviaComando        ; registro W.
+006A                  00125 LCD_PosicionLinea2                      ; Cursor a posición de la Línea 2, a partir de la
+006A   38C0           00126         iorlw   b'11000000'             ; dirección 40h de la DDRAM más el valor del
+006B   2875           00127         goto    LCD_EnviaComando        ; registro W.
+006C                  00128 LCD_OFF                         ; Pantalla apagada.
+006C   3008           00129         movlw   b'00001000'
+006D   2875           00130         goto    LCD_EnviaComando
+006E                  00131 LCD_CursorON                            ; Pantalla encendida y cursor encendido.
+006E   300E           00132         movlw   b'00001110'
+006F   2875           00133         goto    LCD_EnviaComando
+0070                  00134 LCD_CursorOFF                           ; Pantalla encendida y cursor apagado.
+0070   300C           00135         movlw   b'00001100'
+0071   2875           00136         goto    LCD_EnviaComando
+0072                  00137 LCD_Borra                               ; Borra toda la pantalla, memoria DDRAM y pone el 
+0072   3001           00138         movlw   b'00000001'             ; cursor a principio de la línea 1.
+0073   2875           00139         goto    LCD_EnviaComando
+0074                  00140 LCD_2Lineas4Bits5x7                     ; Define la pantalla de 2 líneas, con caracteres
+0074   3028           00141         movlw   b'00101000'             ; de 5x7 puntos y conexión al PIC mediante bus de
+                      00142 ;       goto    LCD_EnviaComando        ; 4 bits. 
+                      00143 
+                      00144 ; Subrutinas "LCD_EnviaComando" y "LCD_Caracter" ------------------------------------
+                      00145 ;
+                      00146 ; "LCD_EnviaComando": Escribe un comando en el registro del módulo LCD. La palabra de
+                      00147 ; comando ha sido entregada a través del registro W.  Trabaja en Modo Comando.
+                      00148 ; "LCD_Caracter": Escribe en la memoria DDRAM del LCD el carácter ASCII introducido a
+                      00149 ; a través del registro W. Trabaja en Modo Dato.
+                      00150 ;
+MPASM 03.50 Released                             RS232_03.ASM   10-12-2000  19:57:27         PAGE  7
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0075                  00151 LCD_EnviaComando
+0075   1005           00152         bcf     LCD_PinRS               ; Activa el Modo Comando, poniendo RS=0.
+0076   2879           00153         goto    LCD_Envia
+0077                  00154 LCD_Caracter
+0077   1405           00155         bsf     LCD_PinRS               ; Activa el "Modo Dato", poniendo RS=1.
+0078   207E           00156         call    LCD_CodigoCGROM ; Obtiene el código para correcta visualización.
+0079                  00157 LCD_Envia
+0079   0090           00158         movwf   LCD_GuardaDato          ; Guarda el dato a enviar.
+007A   204B           00159         call    LCD_EscribeLCD          ; Primero envía el nibble alto.
+007B   0E10           00160         swapf   LCD_GuardaDato,W        ; Ahora envía el nibble bajo. Para ello pasa el
+                      00161                                         ; nibble bajo del dato a enviar a parte alta del byte.
+007C   204B           00162         call    LCD_EscribeLCD          ; Se envía al visualizador LCD.
+007D   0008           00163         return  
+                      00164 
+                      00165 ; Subrutina "LCD_CodigoCGROM" -----------------------------------------------------------
+                      00166 ;
+                      00167 ; A partir del carácter ASCII número 127, los códigos de los caracteres definidos en la
+                      00168 ; tabla CGROM del LM016L no coinciden con los códigos ASCII. Así por ejemplo, el código
+                      00169 ; ASCII de la "Ñ" en la tabla CGRAM del LM016L es EEh.
+                      00170 ;
+                      00171 ; Esta subrutina convierte los códigos ASCII de la "Ñ", "º" y otros, a códigos CGROM para que
+                      00172 ; que puedan ser visualizado en el módulo LM016L.
+                      00173 ; 
+                      00174 ; Entrada:      En (W) el código ASCII del carácter que se desea visualizar.
+                      00175 ; Salida:       En (W) el código definido en la tabla CGROM.
+                      00176 
+007E                  00177 LCD_CodigoCGROM
+007E   008F           00178         movwf   LCD_Dato                ; Guarda el valor del carácter y comprueba si es
+007F                  00179 LCD_EnheMinuscula                       ; un carácter especial.
+007F   3CF1           00180         sublw   'ñ'                     ; ¿Es la "ñ"?
+0080   1D03           00181         btfss   STATUS,Z
+0081   2885           00182         goto    LCD_EnheMayuscula       ; No es "ñ".
+0082   30EE           00183         movlw   b'11101110'             ; Código CGROM de la "ñ".
+0083   008F           00184         movwf   LCD_Dato
+0084   2892           00185         goto    LCD_FinCGROM
+0085                  00186 LCD_EnheMayuscula
+0085   080F           00187         movf    LCD_Dato,W              ; Recupera el código ASCII de entrada.
+0086   3CD1           00188         sublw   'Ñ'                     ; ¿Es la "Ñ"?
+0087   1D03           00189         btfss   STATUS,Z
+0088   288C           00190         goto    LCD_Grado               ; No es "Ñ".
+0089   30EE           00191         movlw   b'11101110'             ; Código CGROM de la "ñ". (No hay símbolo para
+008A   008F           00192         movwf   LCD_Dato                ; la "Ñ" mayúscula en la CGROM).
+008B   2892           00193         goto    LCD_FinCGROM    
+008C                  00194 LCD_Grado
+008C   080F           00195         movf    LCD_Dato,W              ; Recupera el código ASCII de entrada.
+008D   3CBA           00196         sublw   'º'                     ; ¿Es el símbolo "º"?
+008E   1D03           00197         btfss   STATUS,Z
+008F   2892           00198         goto    LCD_FinCGROM            ; No es "º".
+0090   30DF           00199         movlw   b'11011111'             ; Código CGROM del símbolo "º".
+0091   008F           00200         movwf   LCD_Dato
+0092                  00201 LCD_FinCGROM
+0092   080F           00202         movf    LCD_Dato,W              ; En (W) el código buscado.
+0093   0008           00203         return
+MPASM 03.50 Released                             RS232_03.ASM   10-12-2000  19:57:27         PAGE  8
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00204 
+                      00205 ; Subrutina "LCD_DosEspaciosBlancos" y "LCD_LineaBlanco" --------------------------------
+                      00206 ;
+                      00207 ; Visualiza espacios en blanco.
+                      00208 
+0094                  00209 LCD_LineaEnBlanco
+0094   3010           00210         movlw   LCD_CaracteresPorLinea
+0095   289B           00211         goto    LCD_EnviaBlancos
+0096                  00212 LCD_UnEspacioBlanco
+0096   3001           00213         movlw   .1
+0097   289B           00214         goto    LCD_EnviaBlancos
+0098                  00215 LCD_DosEspaciosBlancos
+0098   3002           00216         movlw   .2
+0099   289B           00217         goto    LCD_EnviaBlancos
+009A                  00218 LCD_TresEspaciosBlancos
+009A   3003           00219         movlw   .3
+009B                  00220 LCD_EnviaBlancos
+009B   0092           00221         movwf   LCD_Auxiliar1           ; (LCD_Auxiliar1) se utiliza como contador.
+009C                  00222 LCD_EnviaOtroBlanco     
+009C   3020           00223         movlw   ' '                     ; Esto es un espacio en blanco.
+009D   2077           00224         call    LCD_Caracter            ; Visualiza tanto espacios en blanco como se
+009E   0B92           00225         decfsz  LCD_Auxiliar1,F         ; haya cargado en (LCD_Auxiliar1).
+009F   289C           00226         goto    LCD_EnviaOtroBlanco
+00A0   0008           00227         return
+                      00228 
+                      00229 ; Subrutinas "LCD_ByteCompleto" y "LCD_Byte" --------------------------------------------
+                      00230 ;
+                      00231 ; Subrutina "LCD_ByteCompleto": Visualiza el byte que almacena el registro W en el
+                      00232 ; lugar actual de la pantalla. Por ejemplo, si (W)=b'10101110' visualiza "AE".
+                      00233 ;
+                      00234 ; Subrutina "LCD_Byte" igual que la anterior, pero en caso de que el nibble alto sea cero, 
+                      00235 ; visualiza en su lugar un espacio en blanco. Por ejemplo si (W)=b'10101110' visualiza "AE"
+                      00236 ; y si (W)=b'00001110', visualiza " E" (un espacio blanco delante).
+                      00237 ;
+                      00238 ; Utilizan la subrutina "LCD_Nibble" que se analiza más adelante.
+                      00239 ;
+00A1                  00240 LCD_Byte
+00A1   0093           00241         movwf   LCD_Auxiliar2           ; Guarda el valor de entrada.
+00A2   39F0           00242         andlw   b'11110000'             ; Analiza si el nibble alto es cero.
+00A3   1D03           00243         btfss   STATUS,Z                ; Si es cero lo apaga.
+00A4   28A9           00244         goto    LCD_VisualizaAlto               ; No es cero y lo visualiza.
+00A5   3020           00245         movlw   ' '                     ; Visualiza un espacio en blanco.
+00A6   2077           00246         call    LCD_Caracter
+00A7   28AB           00247         goto    LCD_VisualizaBajo
+                      00248 
+00A8                  00249 LCD_ByteCompleto
+00A8   0093           00250         movwf   LCD_Auxiliar2           ; Guarda el valor de entrada.
+00A9                  00251 LCD_VisualizaAlto
+00A9   0E13           00252         swapf   LCD_Auxiliar2,W         ; Pone el nibble alto en la parte baja.
+00AA   20AC           00253         call    LCD_Nibble              ; Lo visualiza.
+00AB                  00254 LCD_VisualizaBajo
+00AB   0813           00255         movf    LCD_Auxiliar2,W         ; Repite el proceso con el nibble bajo.
+                      00256 ;       call    LCD_Nibble              ; Lo visualiza.
+MPASM 03.50 Released                             RS232_03.ASM   10-12-2000  19:57:27         PAGE  9
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00257 ;       return
+                      00258 
+                      00259 ; Subrutina "LCD_Nibble" ----------------------------------------------------------------
+                      00260 ;
+                      00261 ; Visualiza en el lugar actual de la pantalla, el valor hexadecimal que almacena en el nibble
+                      00262 ; bajo del registro W. El nibble alto de W no es tenido en cuenta. Ejemplos:
+                      00263 ; - Si (W)=b'01010110', se visualizará "6". 
+                      00264 ; - Si (W)=b'10101110', se visualizará "E". 
+                      00265 ;
+00AC                  00266 LCD_Nibble
+00AC   390F           00267         andlw   b'00001111'             ; Se queda con la parte baja.
+00AD   0092           00268         movwf   LCD_Auxiliar1           ; Lo guarda.
+00AE   3C09           00269         sublw   0x09                    ; Comprueba si hay que representarlo con letra.
+00AF   1C03           00270         btfss   STATUS,C        
+00B0   28B4           00271         goto    LCD_EnviaByteLetra
+00B1   0812           00272         movf    LCD_Auxiliar1,W
+00B2   3E30           00273         addlw   '0'                     ; El número se pasa a carácter ASCII sumándole
+00B3   28B6           00274         goto    LCD_FinVisualizaDigito  ; el ASCII del cero y lo visualiza.
+00B4                  00275 LCD_EnviaByteLetra
+00B4   0812           00276         movf    LCD_Auxiliar1,W
+00B5   3E37           00277         addlw   'A'-0x0A                        ; Sí, por tanto, se le suma el ASCII de la 'A'.
+00B6                  00278 LCD_FinVisualizaDigito
+00B6   2877           00279         goto    LCD_Caracter            ; Y visualiza el carácter. Se hace con un "goto"
+                      00280                                         ; para no sobrecargar la pila.
+                      00045         INCLUDE  <RETARDOS.INC>
+                      00001 ;**************************** Librería "RETARDOS.INC" *********************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Librería con múltiples subrutinas de retardos, desde 4 microsegundos hasta 20 segundos. 
+                      00010 ; Además se pueden implementar otras subrutinas muy fácilmente.
+                      00011 ;
+                      00012 ; Se han calculado para un sistema microcontrolador con un PIC trabajando con un cristal
+                      00013 ; de cuarzo a 4 MHz. Como cada ciclo máquina son 4 ciclos de reloj, resulta que cada
+                      00014 ; ciclo máquina tarda 4 x 1/4MHz = 1 µs.
+                      00015 ;
+                      00016 ; En los comentarios, "cm" significa "ciclos máquina".
+                      00017 ;
+                      00018 ; ZONA DE DATOS *********************************************************************
+                      00019 
+                      00020         CBLOCK
+  00000014            00021         R_ContA                         ; Contadores para los retardos.
+  00000015            00022         R_ContB
+  00000016            00023         R_ContC
+                      00024         ENDC
+                      00025 ;
+                      00026 ; RETARDOS de 4 hasta 10 microsegundos ---------------------------------------------------
+                      00027 ;
+                      00028 ; A continuación retardos pequeños teniendo en cuenta que para una frecuencia de 4 MHZ,
+MPASM 03.50 Released                             RS232_03.ASM   10-12-2000  19:57:27         PAGE 10
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00029 ; la llamada a subrutina "call" tarda 2 ciclos máquina, el retorno de subrutina
+                      00030 ; "return" toma otros 2 ciclos máquina y cada instrucción "nop" tarda 1 ciclo máquina.
+                      00031 ;
+00B7                  00032 Retardo_10micros                                ; La llamada "call" aporta 2 ciclos máquina.
+00B7   0000           00033         nop                             ; Aporta 1 ciclo máquina.
+00B8   0000           00034         nop                             ; Aporta 1 ciclo máquina.
+00B9   0000           00035         nop                             ; Aporta 1 ciclo máquina.
+00BA   0000           00036         nop                             ; Aporta 1 ciclo máquina.
+00BB   0000           00037         nop                             ; Aporta 1 ciclo máquina.
+00BC                  00038 Retardo_5micros                         ; La llamada "call" aporta 2 ciclos máquina.
+00BC   0000           00039         nop                             ; Aporta 1 ciclo máquina.
+00BD                  00040 Retardo_4micros                         ; La llamada "call" aporta 2 ciclos máquina.
+00BD   0008           00041         return                          ; El salto del retorno aporta 2 ciclos máquina.
+                      00042 ;
+                      00043 ; RETARDOS de 20 hasta 500 microsegundos ------------------------------------------------
+                      00044 ;
+00BE                  00045 Retardo_500micros                               ; La llamada "call" aporta 2 ciclos máquina.
+00BE   0000           00046         nop                             ; Aporta 1 ciclo máquina.
+00BF   30A4           00047         movlw   d'164'                  ; Aporta 1 ciclo máquina. Este es el valor de "K".
+00C0   28CA           00048         goto    RetardoMicros           ; Aporta 2 ciclos máquina.
+00C1                  00049 Retardo_200micros                               ; La llamada "call" aporta 2 ciclos máquina.
+00C1   0000           00050         nop                             ; Aporta 1 ciclo máquina.
+00C2   3040           00051         movlw   d'64'                   ; Aporta 1 ciclo máquina. Este es el valor de "K".
+00C3   28CA           00052         goto    RetardoMicros           ; Aporta 2 ciclos máquina.
+00C4                  00053 Retardo_100micros                               ; La llamada "call" aporta 2 ciclos máquina.
+00C4   301F           00054         movlw   d'31'                   ; Aporta 1 ciclo máquina. Este es el valor de "K".
+00C5   28CA           00055         goto    RetardoMicros           ; Aporta 2 ciclos máquina.
+00C6                  00056 Retardo_50micros                                ; La llamada "call" aporta 2 ciclos máquina.
+00C6   0000           00057         nop                             ; Aporta 1 ciclo máquina.
+00C7   300E           00058         movlw   d'14'                   ; Aporta 1 ciclo máquina. Este es el valor de "K".
+00C8   28CA           00059         goto    RetardoMicros           ; Aporta 2 ciclos máquina.
+00C9                  00060 Retardo_20micros                                ; La llamada "call" aporta 2 ciclos máquina.
+00C9   3005           00061         movlw   d'5'                    ; Aporta 1 ciclo máquina. Este es el valor de "K".
+                      00062 ;
+                      00063 ; El próximo bloque "RetardoMicros" tarda:
+                      00064 ; 1 + (K-1) + 2 + (K-1)x2 + 2 = (2 + 3K) ciclos máquina.
+                      00065 ;
+00CA                  00066 RetardoMicros
+00CA   0094           00067         movwf   R_ContA                 ; Aporta 1 ciclo máquina.
+00CB                  00068 Rmicros_Bucle
+00CB   0B94           00069         decfsz  R_ContA,F               ; (K-1)x1 cm (cuando no salta) + 2 cm (al saltar).
+00CC   28CB           00070         goto    Rmicros_Bucle           ; Aporta (K-1)x2 ciclos máquina.
+00CD   0008           00071         return                          ; El salto del retorno aporta 2 ciclos máquina.
+                      00072 ;
+                      00073 ;En total estas subrutinas tardan:
+                      00074 ; - Retardo_500micros:  2 + 1 + 1 + 2 + (2 + 3K) = 500 cm = 500 µs. (para K=164 y 4 MHz).
+                      00075 ; - Retardo_200micros:  2 + 1 + 1 + 2 + (2 + 3K) = 200 cm = 200 µs. (para K= 64 y 4 MHz).
+                      00076 ; - Retardo_100micros:  2     + 1 + 2 + (2 + 3K) = 100 cm = 100 µs. (para K= 31 y 4 MHz).
+                      00077 ; - Retardo_50micros :  2 + 1 + 1 + 2 + (2 + 3K) =  50 cm =  50 µs. (para K= 14 y 4 MHz).
+                      00078 ; - Retardo_20micros :  2     + 1     + (2 + 3K) =  20 cm =  20 µs. (para K=  5 y 4 MHz).
+                      00079 ;
+                      00080 ; RETARDOS de 1 ms hasta 200 ms. --------------------------------------------------------
+                      00081 ;
+MPASM 03.50 Released                             RS232_03.ASM   10-12-2000  19:57:27         PAGE 11
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+00CE                  00082 Retardo_200ms                           ; La llamada "call" aporta 2 ciclos máquina.
+00CE   30C8           00083         movlw   d'200'                  ; Aporta 1 ciclo máquina. Este es el valor de "M".
+00CF   28DD           00084         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+00D0                  00085 Retardo_100ms                           ; La llamada "call" aporta 2 ciclos máquina.
+00D0   3064           00086         movlw   d'100'                  ; Aporta 1 ciclo máquina. Este es el valor de "M".
+00D1   28DD           00087         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+00D2                  00088 Retardo_50ms                            ; La llamada "call" aporta 2 ciclos máquina.
+00D2   3032           00089         movlw   d'50'                   ; Aporta 1 ciclo máquina. Este es el valor de "M".
+00D3   28DD           00090         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+00D4                  00091 Retardo_20ms                            ; La llamada "call" aporta 2 ciclos máquina.
+00D4   3014           00092         movlw   d'20'                   ; Aporta 1 ciclo máquina. Este es el valor de "M".
+00D5   28DD           00093         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+00D6                  00094 Retardo_10ms                            ; La llamada "call" aporta 2 ciclos máquina.
+00D6   300A           00095         movlw   d'10'                   ; Aporta 1 ciclo máquina. Este es el valor de "M".
+00D7   28DD           00096         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+00D8                  00097 Retardo_5ms                             ; La llamada "call" aporta 2 ciclos máquina.
+00D8   3005           00098         movlw   d'5'                    ; Aporta 1 ciclo máquina. Este es el valor de "M".
+00D9   28DD           00099         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+00DA                  00100 Retardo_2ms                             ; La llamada "call" aporta 2 ciclos máquina.
+00DA   3002           00101         movlw   d'2'                    ; Aporta 1 ciclo máquina. Este es el valor de "M".
+00DB   28DD           00102         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+00DC                  00103 Retardo_1ms                             ; La llamada "call" aporta 2 ciclos máquina.
+00DC   3001           00104         movlw   d'1'                    ; Aporta 1 ciclo máquina. Este es el valor de "M".
+                      00105 ;
+                      00106 ; El próximo bloque "Retardos_ms" tarda:
+                      00107 ; 1 + M + M + KxM + (K-1)xM + Mx2 + (K-1)Mx2 + (M-1) + 2 + (M-1)x2 + 2 =
+                      00108 ; = (2 + 4M + 4KM) ciclos máquina. Para K=249 y M=1 supone 1002 ciclos máquina
+                      00109 ; que a 4 MHz son 1002 µs = 1 ms.
+                      00110 ;
+00DD                  00111 Retardos_ms
+00DD   0095           00112         movwf   R_ContB                 ; Aporta 1 ciclo máquina.
+00DE                  00113 R1ms_BucleExterno
+00DE   30F9           00114         movlw   d'249'                  ; Aporta Mx1 ciclos máquina. Este es el valor de "K".
+00DF   0094           00115         movwf   R_ContA                 ; Aporta Mx1 ciclos máquina.
+00E0                  00116 R1ms_BucleInterno
+00E0   0000           00117         nop                             ; Aporta KxMx1 ciclos máquina.
+00E1   0B94           00118         decfsz  R_ContA,F               ; (K-1)xMx1 cm (cuando no salta) + Mx2 cm (al saltar).
+00E2   28E0           00119         goto    R1ms_BucleInterno               ; Aporta (K-1)xMx2 ciclos máquina.
+00E3   0B95           00120         decfsz  R_ContB,F               ; (M-1)x1 cm (cuando no salta) + 2 cm (al saltar).
+00E4   28DE           00121         goto    R1ms_BucleExterno       ; Aporta (M-1)x2 ciclos máquina.
+00E5   0008           00122         return                          ; El salto del retorno aporta 2 ciclos máquina.
+                      00123 ;
+                      00124 ;En total estas subrutinas tardan:
+                      00125 ; - Retardo_200ms:      2 + 1 + 2 + (2 + 4M + 4KM) = 200007 cm = 200 ms. (M=200 y K=249).
+                      00126 ; - Retardo_100ms:      2 + 1 + 2 + (2 + 4M + 4KM) = 100007 cm = 100 ms. (M=100 y K=249).
+                      00127 ; - Retardo_50ms :      2 + 1 + 2 + (2 + 4M + 4KM) =  50007 cm =  50 ms. (M= 50 y K=249).
+                      00128 ; - Retardo_20ms :      2 + 1 + 2 + (2 + 4M + 4KM) =  20007 cm =  20 ms. (M= 20 y K=249).
+                      00129 ; - Retardo_10ms :      2 + 1 + 2 + (2 + 4M + 4KM) =  10007 cm =  10 ms. (M= 10 y K=249).
+                      00130 ; - Retardo_5ms  :      2 + 1 + 2 + (2 + 4M + 4KM) =   5007 cm =   5 ms. (M=  5 y K=249).
+                      00131 ; - Retardo_2ms  :      2 + 1 + 2 + (2 + 4M + 4KM) =   2007 cm =   2 ms. (M=  2 y K=249).
+                      00132 ; - Retardo_1ms  :      2 + 1     + (2 + 4M + 4KM) =   1005 cm =   1 ms. (M=  1 y K=249).
+                      00133 ;
+                      00134 ; RETARDOS de 0.5 hasta 20 segundos ---------------------------------------------------
+MPASM 03.50 Released                             RS232_03.ASM   10-12-2000  19:57:27         PAGE 12
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00135 ;
+00E6                  00136 Retardo_20s                             ; La llamada "call" aporta 2 ciclos máquina.
+00E6   30C8           00137         movlw   d'200'                  ; Aporta 1 ciclo máquina. Este es el valor de "N".
+00E7   28F1           00138         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+00E8                  00139 Retardo_10s                             ; La llamada "call" aporta 2 ciclos máquina.
+00E8   3064           00140         movlw   d'100'                  ; Aporta 1 ciclo máquina. Este es el valor de "N".
+00E9   28F1           00141         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+00EA                  00142 Retardo_5s                              ; La llamada "call" aporta 2 ciclos máquina.
+00EA   3032           00143         movlw   d'50'                   ; Aporta 1 ciclo máquina. Este es el valor de "N".
+00EB   28F1           00144         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+00EC                  00145 Retardo_2s                              ; La llamada "call" aporta 2 ciclos máquina.
+00EC   3014           00146         movlw   d'20'                   ; Aporta 1 ciclo máquina. Este es el valor de "N".
+00ED   28F1           00147         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+00EE                  00148 Retardo_1s                              ; La llamada "call" aporta 2 ciclos máquina.
+00EE   300A           00149         movlw   d'10'                   ; Aporta 1 ciclo máquina. Este es el valor de "N".
+00EF   28F1           00150         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+00F0                  00151 Retardo_500ms                           ; La llamada "call" aporta 2 ciclos máquina.
+00F0   3005           00152         movlw   d'5'                    ; Aporta 1 ciclo máquina. Este es el valor de "N".
+                      00153 ;
+                      00154 ; El próximo bloque "Retardo_1Decima" tarda:
+                      00155 ; 1 + N + N + MxN + MxN + KxMxN + (K-1)xMxN + MxNx2 + (K-1)xMxNx2 +
+                      00156 ;   + (M-1)xN + Nx2 + (M-1)xNx2 + (N-1) + 2 + (N-1)x2 + 2 =
+                      00157 ; = (2 + 4M + 4MN + 4KM) ciclos máquina. Para K=249, M=100 y N=1 supone 100011
+                      00158 ; ciclos máquina que a 4 MHz son 100011 µs = 100 ms = 0,1 s = 1 décima de segundo.
+                      00159 ;
+00F1                  00160 Retardo_1Decima
+00F1   0096           00161         movwf   R_ContC                 ; Aporta 1 ciclo máquina.
+00F2                  00162 R1Decima_BucleExterno2
+00F2   3064           00163         movlw   d'100'                  ; Aporta Nx1 ciclos máquina. Este es el valor de "M".
+00F3   0095           00164         movwf   R_ContB                 ; Aporta Nx1 ciclos máquina.
+00F4                  00165 R1Decima_BucleExterno
+00F4   30F9           00166         movlw   d'249'                  ; Aporta MxNx1 ciclos máquina. Este es el valor de "K".
+00F5   0094           00167         movwf   R_ContA                 ; Aporta MxNx1 ciclos máquina.
+00F6                  00168 R1Decima_BucleInterno          
+00F6   0000           00169         nop                             ; Aporta KxMxNx1 ciclos máquina.
+00F7   0B94           00170         decfsz  R_ContA,F               ; (K-1)xMxNx1 cm (si no salta) + MxNx2 cm (al saltar).
+00F8   28F6           00171         goto    R1Decima_BucleInterno   ; Aporta (K-1)xMxNx2 ciclos máquina.
+00F9   0B95           00172         decfsz  R_ContB,F               ; (M-1)xNx1 cm (cuando no salta) + Nx2 cm (al saltar).
+00FA   28F4           00173         goto    R1Decima_BucleExterno   ; Aporta (M-1)xNx2 ciclos máquina.
+00FB   0B96           00174         decfsz  R_ContC,F               ; (N-1)x1 cm (cuando no salta) + 2 cm (al saltar).
+00FC   28F2           00175         goto    R1Decima_BucleExterno2  ; Aporta (N-1)x2 ciclos máquina.
+00FD   0008           00176         return                          ; El salto del retorno aporta 2 ciclos máquina.
+                      00177 ;
+                      00178 ;En total estas subrutinas tardan:
+                      00179 ; - Retardo_20s:        2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) = 20000807 cm = 20 s.
+                      00180 ;                       (N=200, M=100 y K=249).
+                      00181 ; - Retardo_10s:        2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) = 10000407 cm = 10 s.
+                      00182 ;                       (N=100, M=100 y K=249).
+                      00183 ; - Retardo_5s:         2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) =  5000207 cm =  5 s.
+                      00184 ;                       (N= 50, M=100 y K=249).
+                      00185 ; - Retardo_2s:         2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) =  2000087 cm =  2 s.
+                      00186 ;                       (N= 20, M=100 y K=249).
+                      00187 ; - Retardo_1s:         2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) =  1000047 cm =  1 s.
+MPASM 03.50 Released                             RS232_03.ASM   10-12-2000  19:57:27         PAGE 13
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00188 ;                       (N= 10, M=100 y K=249).
+                      00189 ; - Retardo_500ms:      2 + 1     + (2 + 4N + 4MN + 4KMN) =   500025 cm = 0,5 s.
+                      00190 ;                       (N=  5, M=100 y K=249).
+                      00046         END
+MPASM 03.50 Released                             RS232_03.ASM   10-12-2000  19:57:27         PAGE 14
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+C                                 00000000
+CambioLinea                       0000000A
+DC                                00000001
+EEADR                             00000009
+EECON1                            00000088
+EECON2                            00000089
+EEDATA                            00000008
+EEIE                              00000006
+EEIF                              00000004
+F                                 00000001
+FSR                               00000004
+GIE                               00000007
+GuardaDato                        0000000C
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+Inicio                            00000000
+LCD_2Lineas4Bits5x7               00000074
+LCD_Auxiliar1                     00000012
+LCD_Auxiliar2                     00000013
+LCD_Borra                         00000072
+LCD_BusDatos                      PORTB
+LCD_Byte                          000000A1
+LCD_ByteCompleto                  000000A8
+LCD_Caracter                      00000077
+LCD_CaracteresPorLinea            00000010
+LCD_CodigoCGROM                   0000007E
+LCD_CursorIncr                    00000062
+LCD_CursorOFF                     00000070
+LCD_CursorON                      0000006E
+LCD_Dato                          0000000F
+LCD_DosEspaciosBlancos            00000098
+LCD_EnheMayuscula                 00000085
+LCD_EnheMinuscula                 0000007F
+LCD_Envia                         00000079
+LCD_EnviaBlancos                  0000009B
+LCD_EnviaByteLetra                000000B4
+LCD_EnviaComando                  00000075
+LCD_EnviaOtroBlanco               0000009C
+LCD_EscribeLCD                    0000004B
+LCD_FinCGROM                      00000092
+LCD_FinVisualizaDigito            000000B6
+LCD_Grado                         0000008C
+LCD_GuardaDato                    00000010
+LCD_GuardaTRISB                   00000011
+LCD_Inicializa                    00000033
+LCD_Linea1                        00000064
+LCD_Linea2                        00000066
+LCD_LineaEnBlanco                 00000094
+LCD_Nibble                        000000AC
+MPASM 03.50 Released                             RS232_03.ASM   10-12-2000  19:57:27         PAGE 15
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+LCD_OFF                           0000006C
+LCD_PinEnable                     PORTA,2
+LCD_PinRS                         PORTA,0
+LCD_PinRW                         PORTA,1
+LCD_PosicionLinea1                00000068
+LCD_PosicionLinea2                0000006A
+LCD_TresEspaciosBlancos           0000009A
+LCD_UnEspacioBlanco               00000096
+LCD_VisualizaAlto                 000000A9
+LCD_VisualizaBajo                 000000AB
+NOT_PD                            00000003
+NOT_RBPU                          00000007
+NOT_TO                            00000004
+OPTION_REG                        00000081
+PCL                               00000002
+PCLATH                            0000000A
+PORTA                             00000005
+PORTB                             00000006
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+Principal                         00000002
+R1Decima_BucleExterno             000000F4
+R1Decima_BucleExterno2            000000F2
+R1Decima_BucleInterno             000000F6
+R1ms_BucleExterno                 000000DE
+R1ms_BucleInterno                 000000E0
+RBIE                              00000003
+RBIF                              00000000
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+RS232_ContadorBits                0000000D
+RS232_Dato                        0000000E
+RS232_Entrada                     PORTA,3
+RS232_EnviaBit                    00000027
+RS232_EnviaCero                   0000002C
+RS232_EnviaDato                   00000022
+RS232_EnviaNumero                 00000021
+RS232_EnviaUno                    0000002A
+RS232_EsperaBitStart              00000013
+RS232_FinEnviaBit                 0000002D
+RS232_Inicializa                  0000000C
+RS232_LeeBit                      00000017
+RS232_LeeDato                     00000011
+RS232_Salida                      PORTA,4
+R_ContA                           00000014
+R_ContB                           00000015
+R_ContC                           00000016
+RetardoMicros                     000000CA
+Retardo_100micros                 000000C4
+Retardo_100ms                     000000D0
+MPASM 03.50 Released                             RS232_03.ASM   10-12-2000  19:57:27         PAGE 16
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+Retardo_10micros                  000000B7
+Retardo_10ms                      000000D6
+Retardo_10s                       000000E8
+Retardo_1Decima                   000000F1
+Retardo_1ms                       000000DC
+Retardo_1s                        000000EE
+Retardo_200micros                 000000C1
+Retardo_200ms                     000000CE
+Retardo_20micros                  000000C9
+Retardo_20ms                      000000D4
+Retardo_20s                       000000E6
+Retardo_2ms                       000000DA
+Retardo_2s                        000000EC
+Retardo_4micros                   000000BD
+Retardo_500micros                 000000BE
+Retardo_500ms                     000000F0
+Retardo_50micros                  000000C6
+Retardo_50ms                      000000D2
+Retardo_5micros                   000000BC
+Retardo_5ms                       000000D8
+Retardo_5s                        000000EA
+Retardos_ms                       000000DD
+RetornoCarro                      0000000D
+Rmicros_Bucle                     000000CB
+STATUS                            00000003
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+TMR0                              00000001
+TRISA                             00000085
+TRISB                             00000086
+W                                 00000000
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_CP_OFF                           00003FFF
+_CP_ON                            0000000F
+_HS_OSC                           00003FFE
+_LP_OSC                           00003FFC
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC                           00003FFF
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FFD
+__16F84A                          00000001
+MPASM 03.50 Released                             RS232_03.ASM   10-12-2000  19:57:27         PAGE 17
+
+
+MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
+
+
+0000 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0040 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0080 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+00C0 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXX--
+2000 : -------X-------- ---------------- ---------------- ----------------
+
+All other memory blocks unused.
+
+Program Memory Words Used:   254
+Program Memory Words Free:   770
+
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :     1 reported,     0 suppressed
+
+

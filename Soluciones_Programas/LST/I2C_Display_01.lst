@@ -1,0 +1,729 @@
+MPASM 03.50 Released                       I2C_DISPLAY_01.ASM   10-26-2003  19:28:43         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;************************************** I2C_Display_01.asm ****************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Visualiza la palabra "HOLA" en los displays de 7 segmentos conectados al SAA1064.
+                      00010 ;
+                      00011 ; ZONA DE DATOS **********************************************************************
+                      00012 
+2007   3FF1           00013         __CONFIG   _CP_OFF &  _WDT_OFF & _PWRTE_ON & _XT_OSC
+                      00014         LIST       P=16F84A
+                      00015         INCLUDE  <P16F84A.INC>
+                      00001         LIST
+                      00002 ; P16F84A.INC  Standard Header File, Version 2.00    Microchip Technology, Inc.
+                      00134         LIST
+                      00016 
+                      00017         CBLOCK   0x0C
+                      00018         ENDC
+                      00019 
+  00000070            00020 SAA1064_Direccion  EQU  b'01110000'     ; SAA1064 como esclavo en bus I2C
+                      00021 
+                      00022 ; ZONA DE CÓDIGOS *********************************************************************
+                      00023 
+0000                  00024         ORG     0
+0000                  00025 Inicio
+0000   2071           00026         call    I2C_EnviaStart          ; Envia condición de Start.
+0001   3070           00027         movlw   SAA1064_Direccion       ; Apunta al SAA1064.
+0002   207F           00028         call    I2C_EnviaByte
+0003   0103           00029         clrw                            ; El registro de control está en la posición 0.
+0004   207F           00030         call    I2C_EnviaByte
+0005   3047           00031         movlw   b'01000111'             ; Palabra de control para luminosidad media
+0006   207F           00032         call    I2C_EnviaByte           ; (12 mA) y visualización dinámica multiplexada.
+0007   3041           00033         movlw   'A'                     ; Escribe la palabra "HOLA" empezando por la
+0008   2018           00034         call    ASCII_a_7Segmentos      ; última letra debido a la disposición de los
+0009   207F           00035         call    I2C_EnviaByte           ; displays.
+000A   304C           00036         movlw   'L'
+000B   2018           00037         call    ASCII_a_7Segmentos
+000C   207F           00038         call    I2C_EnviaByte
+000D   304F           00039         movlw   'O'
+000E   2018           00040         call    ASCII_a_7Segmentos
+000F   207F           00041         call    I2C_EnviaByte
+0010   3048           00042         movlw   'H'
+0011   2018           00043         call    ASCII_a_7Segmentos
+0012   207F           00044         call    I2C_EnviaByte
+0013   2079           00045         call    I2C_EnviaStop           ; Termina de enviar datos.
+0014                  00046 Principal
+0014   0063           00047         sleep                           ; Pasa a reposo.
+0015   2814           00048         goto    Principal
+                      00049 
+                      00050         INCLUDE  <DISPLAY_7S.INC>
+MPASM 03.50 Released                       I2C_DISPLAY_01.ASM   10-26-2003  19:28:43         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;**************************** Librería "DISPLAY_7S.INC **********************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Subrutinas para convertir un código ASCII en su valor equivalente en 7 segmentos y así
+                      00010 ; poder activar displays.
+                      00011 ;
+                      00012 ; Si el código ASCII es menor que el signo más '+' o mayor  que la letra zeta 'Z' obtiene
+                      00013 ; el código erróneo b'10000000' para encender sólo el punto decimal del display.
+                      00014 ;
+                      00015 ; Si se trata de un número hay que ejecutar la subrutina "Numero_a_7Segmentos" que convierte
+                      00016 ; un numero (de 0 a 9) en su equivalente en código de 7 segmentos.
+                      00017 ;
+                      00018 ; Entrada: En registro W, el dato en código ASCII a convertir.
+                      00019 ; Salida : En registro W, el código 7 segmentos.
+                      00020 
+                      00021         CBLOCK
+  0000000C            00022         Display7s_Dato                  ; Aquí se reservará el valor del dato de entrada.
+                      00023         ENDC
+                      00024         
+0016                  00025 Numero_a_7Segmentos
+0016   390F           00026         andlw   b'00001111'             ; Se queda con el nibble bajo.
+0017   3E30           00027         addlw   '0'                     ; Se pasa a ASCII sumándole el valor ASCII
+                      00028                                         ; del "0" y ejecuta "ASCII_7_Segmentos".
+0018                  00029 ASCII_a_7Segmentos
+0018   008C           00030         movwf   Display7s_Dato          ; Guarda el valor del carácter.
+0019   3C20           00031         sublw   ' '                     ; Comprueba si es " " (espacio).
+001A   1903           00032         btfsc   STATUS,Z                ; ¿Es distinta de " " (espacio)?, ¿Z=0?
+001B   3400           00033         retlw   00h                     ; Es " ". Devuelve el código 7-Segmentos del " ".
+001C   080C           00034         movf    Display7s_Dato,W                ; Recupera el valor del dato de entrada.
+001D   3CD1           00035         sublw   'Ñ'                     ; Comprueba si es "Ñ".
+001E   1903           00036         btfsc   STATUS,Z                ; ¿Es distinta de "Ñ"?, ¿Z=0?
+001F   3455           00037         retlw   55h                     ; Es "Ñ". Devuelve el código 7-Segmentos de "Ñ".
+0020   080C           00038         movf    Display7s_Dato,W                ; Recupera el valor del dato de entrada.
+0021   3CBA           00039         sublw   'º'                     ; Comprueba si es "º".
+0022   1903           00040         btfsc   STATUS,Z                ; ¿Es distinta de "º"?, ¿Z=0?
+0023   3463           00041         retlw   63h                     ; Es "º". Devuelve el código 7-Segmentos de "º".
+                      00042 ;
+0024   080C           00043         movf    Display7s_Dato,W                ; Comprueba si el código ASCII es mayor que la "Z".
+0025   3C5A           00044         sublw   'Z'                     ; (W)='Z'-(Display7s_Dato)
+0026   1C03           00045         btfss   STATUS,C                ; ¿C=1?, ¿(W) positivo?, ¿'Z'>=(Display7s_Dato)?
+0027   3480           00046         retlw   b'10000000'             ; Si el código ASCII es mayor que 'Z' es un error.
+0028   302B           00047         movlw   '+'                     ; Averigua en qué orden está el carácter leído
+0029   020C           00048         subwf   Display7s_Dato,W                ; dentro de la tabla de conversión, respecto del
+002A   1C03           00049         btfss   STATUS,C                ; primero que es '+'.
+002B   3480           00050         retlw   b'10000000'             ; Si el código ASCII es menor que '+' es un error.
+                      00051 ;
+002C   0782           00052         addwf   PCL,F                   ; Obtiene el código 7 segmentos.
+002D                  00053 InicioTablaASCII
+MPASM 03.50 Released                       I2C_DISPLAY_01.ASM   10-26-2003  19:28:43         PAGE  3
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+002D   3446 3404 3440 00054         DT      46h, 04h, 40h, 80h, 00h, 3Fh, 06h, 5Bh, 4Fh, 66h, 6Dh   ; Signos y
+       3480 3400 343F 
+       3406 345B 344F 
+       3466 346D 
+0038   347D 3407 347F 00055         DT      7Dh, 07h, 7Fh, 67h, 41h, 88h, 00h, 48h, 00h, 00h, 00h   ; números.
+       3467 3441 3488 
+       3400 3448 3400 
+       3400 3400 
+0043   3477 347C 3439 00056         DT      77h, 7Ch, 39h, 5Eh, 79h, 71h, 6Fh, 76h, 19h, 1Eh, 7Ah, 38h, 37h ; Letras.
+       345E 3479 3471 
+       346F 3476 3419 
+       341E 347A 3438 
+       3437 
+0050   3454 343F 3473 00057         DT      54h, 3Fh, 73h, 67h, 50h, 6Dh, 78h, 1Ch, 3Eh, 1Dh, 70h, 6Eh, 49h
+       3467 3450 346D 
+       3478 341C 343E 
+       341D 3470 346E 
+       3449 
+005D                  00058 FinTablaASCII
+                      00059 ;
+                      00060 ; Esta es la tabla para la visualización en display de siete segmentos (Ver figura 11-3).
+                      00061 
+                      00062         IF (FinTablaASCII > 0xFF)
+                      00063                 ERROR   "¡CUIDADO!: La tabla ha superado el tamaño de la página de los"
+                      00064                 MESSG   "primeros 256 bytes de memoria ROM. NO funcionará correctamente."
+                      00065         ENDIF
+                      00066 
+                      00067 ;       ===================================================================
+                      00068 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00069 ;         E. Palacios, F. Remiro y L. López.
+                      00070 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00071 ;       ===================================================================
+                      00051         INCLUDE  <BUS_I2C.INC>
+                      00001 ;**************************** Librería "BUS_I2C.INC" ************************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Estas subrutinas permiten realizar las tareas básicas de control del bus serie I2C, 
+                      00010 ; por parte de un solo microcontrolador maestro.
+                      00011 ;
+                      00012 ; ZONA DE DATOS **********************************************************************
+                      00013 ;
+                      00014         CBLOCK
+  0000000D            00015         I2C_ContadorBits                ; Cuenta los bits a transmitir o a recibir.
+  0000000E            00016         I2C_Dato                        ; Dato a transmitir o recibido.
+  0000000F            00017         I2C_Flags                       ; Guarda la información del estado del bus I2C.
+                      00018         ENDC
+                      00019 
+                      00020 #DEFINE I2C_UltimoByteLeer      I2C_Flags,0
+MPASM 03.50 Released                       I2C_DISPLAY_01.ASM   10-26-2003  19:28:43         PAGE  4
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00021 ;    -  (I2C_UltimoByteLeer)=0, NO es el último byte a leer por el maestro.
+                      00022 ;    -  (I2C_UltimoByteLeer)=1, SÍ es el último byte a leer por el maestro.
+                      00023 
+                      00024 ; La definición de las líneas SCL y SDA del bus I2C se puede cambiar según las
+                      00025 ; necesidades del hardware.
+                      00026 
+                      00027 #DEFINE SCL     PORTA,3                 ; Línea SCL del bus I2C.
+                      00028 #DEFINE SDA     PORTA,4                 ; Línea SDA del bus I2C.
+                      00029 ;
+                      00030 ; Subrutina "SDA_Bajo" -------------------------------------------------------------------------------
+                      00031 ;
+005D                  00032 SDA_Bajo
+005D   1683           00033         bsf     STATUS,RP0              ; Configura la línea SDA como salida.
+005E   1205           00034         bcf     SDA
+005F   1283           00035         bcf     STATUS,RP0
+0060   1205           00036         bcf     SDA                     ; SDA en bajo.
+0061   0008           00037         return
+                      00038 ;
+                      00039 ; Subrutina "SDA_AltaImpedancia" --------------------------------------------------------
+                      00040 ;
+0062                  00041 SDA_AltaImpedancia
+0062   1683           00042         bsf     STATUS,RP0              ; Configura la línea SDA entrada.
+0063   1605           00043         bsf     SDA                     ; Lo pone en alta impedancia y, gracias a la
+0064   1283           00044         bcf     STATUS,RP0              ; Rp de esta línea, se mantiene a nivel alto.
+0065   0008           00045         return
+                      00046 ;
+                      00047 ; Subrutina "SCL_Bajo" ------------------------------------------------------------------
+                      00048 ;
+0066                  00049 SCL_Bajo
+0066   1683           00050         bsf     STATUS,RP0
+0067   1185           00051         bcf     SCL                     ; Configura la línea SCL como salida.
+0068   1283           00052         bcf     STATUS,RP0
+0069   1185           00053         bcf     SCL                     ; La línea de reloj SCL en bajo.
+006A   0008           00054         return
+                      00055 ;
+                      00056 ; Subrutina "SCL_AltaImpedancia" --------------------------------------------------------
+                      00057 ;
+006B                  00058 SCL_AltaImpedancia
+006B   1683           00059         bsf     STATUS,RP0              ; Configura la línea SCL entrada.
+006C   1585           00060         bsf     SCL                     ; Lo pone en alta impedancia y, gracias a la Rp
+006D   1283           00061         bcf     STATUS,RP0              ; de esta línea, se mantiene a nivel alto.
+006E                  00062 SCL_EsperaNivelAlto
+006E   1D85           00063         btfss   SCL                     ; Si algún esclavo mantiene esta línea en bajo
+006F   286E           00064         goto    SCL_EsperaNivelAlto     ; hay que esperar.
+0070   0008           00065         return
+                      00066 ;
+                      00067 ; Subrutina "I2C_EnviaStart" ------------------------------------------------------------
+                      00068 ;
+                      00069 ; Esta subrutina envía una condición de Start o inicio.
+                      00070 ;
+0071                  00071 I2C_EnviaStart
+0071   2062           00072         call    SDA_AltaImpedancia      ; Línea SDA en alto.
+0072   206B           00073         call    SCL_AltaImpedancia      ; Línea SCL en alto.
+MPASM 03.50 Released                       I2C_DISPLAY_01.ASM   10-26-2003  19:28:43         PAGE  5
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0073   20AE           00074         call    Retardo_4micros         ; Tiempo tBUF del protocolo.
+0074   205D           00075         call    SDA_Bajo                ; Flanco de bajada de SDA mientras SCL está alto.
+0075   20AE           00076         call    Retardo_4micros         ; Tiempo tHD;STA del protocolo.
+0076   2066           00077         call    SCL_Bajo                ; Flanco de bajada del reloj SCL.
+0077   20AE           00078         call    Retardo_4micros 
+0078   0008           00079         return
+                      00080 ;
+                      00081 ; Subrutina "I2C_EnviaStop" -------------------------------------------------------------
+                      00082 ;
+                      00083 ; Esta subrutina envía un condición de Stop o parada.
+                      00084 ;
+0079                  00085 I2C_EnviaStop
+0079   205D           00086         call    SDA_Bajo
+007A   206B           00087         call    SCL_AltaImpedancia      ; Flanco de subida de SCL.
+007B   20AE           00088         call    Retardo_4micros         ; Tiempo tSU;STO del protocolo.
+007C   2062           00089         call    SDA_AltaImpedancia      ; Flanco de subida de SDA.
+007D   20AE           00090         call    Retardo_4micros         ; Tiempo tBUF del protocolo.
+007E   0008           00091         return
+                      00092 ;
+                      00093 ; Subrutina "I2C_EnviaByte" -------------------------------------------------------------
+                      00094 ;
+                      00095 ; El microcontrolador maestro transmite un byte por el bus I2C, comenzando por el bit
+                      00096 ; MSB. El byte a transmitir debe estar cargado previamente en el registro de trabajo W.
+                      00097 ; De la subrutina ejecutada anteriormente I2C_EnviaStart o esta misma I2C_EnviaByte, 
+                      00098 ; la línea SCL se debe encontrar a nivel bajo al menos durante 5 µs.
+                      00099 ;
+007F                  00100 I2C_EnviaByte
+007F   008E           00101         movwf   I2C_Dato                        ; Almacena el byte a transmitir.
+0080   3008           00102         movlw   0x08                    ; A transmitir 8 bits.
+0081   008D           00103         movwf   I2C_ContadorBits
+0082                  00104 I2C_EnviaBit
+0082   0D8E           00105         rlf     I2C_Dato,F              ; Chequea el bit, llevándolo previamente al Carry.
+0083   1803           00106         btfsc   STATUS,C
+0084   2887           00107         goto    I2C_EnviaUno
+0085                  00108 I2C_EnviaCero
+0085   205D           00109         call    SDA_Bajo                ; Si es "0" envía un nivel bajo.
+0086   2888           00110         goto    I2C_FlancoSCL
+0087                  00111 I2C_EnviaUno
+0087   2062           00112         call    SDA_AltaImpedancia      ; Si es "1" lo activará a alto.
+0088                  00113 I2C_FlancoSCL
+0088   206B           00114         call    SCL_AltaImpedancia      ; Flanco de subida del SCL.
+0089   20AE           00115         call    Retardo_4micros         ; Tiempo tHIGH del protocolo.
+008A   2066           00116         call    SCL_Bajo                ; Termina el semiperiodo positivo del reloj.
+008B   20AE           00117         call    Retardo_4micros         ; Tiempo tHD;DAT del protocolo.
+008C   0B8D           00118         decfsz  I2C_ContadorBits,F              ; Lazo para los ocho bits.
+008D   2882           00119         goto    I2C_EnviaBit
+                      00120 ;
+008E   2062           00121         call    SDA_AltaImpedancia      ; Libera la línea de datos.
+008F   206B           00122         call    SCL_AltaImpedancia      ; Pulso en alto de reloj para que el esclavo
+0090   20AE           00123         call    Retardo_4micros         ; pueda enviar el bit ACK.
+0091   2066           00124         call    SCL_Bajo
+0092   20AE           00125         call    Retardo_4micros
+0093   0008           00126         return
+MPASM 03.50 Released                       I2C_DISPLAY_01.ASM   10-26-2003  19:28:43         PAGE  6
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00127 ;
+                      00128 ; Subrutina "I2C_LeeByte" ---------------------------------------------------------------
+                      00129 ;
+                      00130 ; El microcontrolador maestro lee un byte desde el esclavo conectado al bus I2C. El dato
+                      00131 ; recibido se carga en el registro I2C_Dato y lo envía a la subrutina superior a través
+                      00132 ; del registro W. Se empieza a leer por el bit de mayor peso MSB.
+                      00133 ; De alguna de las subrutinas ejecutadas anteriormente I2C_EnviaStart, I2C_EnviaByte
+                      00134 ; o esta misma I2C_LeeByte, la línea SCL lleva en bajo al menos 5 µs.
+                      00135 
+0094                  00136 I2C_LeeByte
+0094   3008           00137         movlw   0x08                    ; A recibir 8 bits.
+0095   008D           00138         movwf   I2C_ContadorBits
+0096   2062           00139         call    SDA_AltaImpedancia      ; Deja libre la línea de datos.
+0097                  00140 I2C_LeeBit
+0097   206B           00141         call    SCL_AltaImpedancia      ; Flanco de subida del reloj.
+0098   1003           00142         bcf     STATUS,C                ; En principio supone que es "0".
+0099   1A05           00143         btfsc   SDA                     ; Lee el bit
+009A   1403           00144         bsf     STATUS,C                ; Si es "1" carga 1 en el Carry.
+009B   0D8E           00145         rlf     I2C_Dato,F              ; Lo introduce en el registro.
+009C   2066           00146         call    SCL_Bajo                ; Termina el semiperiodo positivo del reloj.
+009D   20AE           00147         call    Retardo_4micros         ; Tiempo tHD;DAT del protocolo.
+009E   0B8D           00148         decfsz  I2C_ContadorBits,F              ; Lazo para los 8 bits.
+009F   2897           00149         goto    I2C_LeeBit
+                      00150 ;
+                      00151 ; Chequea si este es el último byte a leer para enviar o no el bit de reconocimiento
+                      00152 ; ACK en consecuencia.
+                      00153 ;
+00A0   1C0F           00154         btfss   I2C_UltimoByteLeer      ; Si es el último, no debe enviar
+                      00155                                         ; el bit de reconocimiento ACK.
+00A1   205D           00156         call    SDA_Bajo                ; Envía el bit de reconocimiento ACK
+                      00157                                         ; porque todavía no es el último byte a leer.
+00A2   206B           00158         call    SCL_AltaImpedancia      ; Pulso en alto del SCL para transmitir el
+00A3   20AE           00159         call    Retardo_4micros         ; bit ACK de reconocimiento. Este es tHIGH.
+00A4   2066           00160         call    SCL_Bajo                ; Pulso de bajada del SCL.
+00A5   20AE           00161         call    Retardo_4micros
+00A6   080E           00162         movf    I2C_Dato,W              ; El resultado se manda en el registro de
+00A7   0008           00163         return                          ; de trabajo W.
+                      00164         
+                      00165 ;       ===================================================================
+                      00166 ;         Del libro "MICROCONTROLADOR PIC16F84. DESARROLLO DE PROYECTOS"
+                      00167 ;         E. Palacios, F. Remiro y L. López.
+                      00168 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00169 ;       ===================================================================
+                      00052         INCLUDE  <RETARDOS.INC>
+                      00001 ;**************************** Librería "RETARDOS.INC" *********************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Librería con múltiples subrutinas de retardos, desde 4 microsegundos hasta 20 segundos. 
+MPASM 03.50 Released                       I2C_DISPLAY_01.ASM   10-26-2003  19:28:43         PAGE  7
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00010 ; Además se pueden implementar otras subrutinas muy fácilmente.
+                      00011 ;
+                      00012 ; Se han calculado para un sistema microcontrolador con un PIC trabajando con un cristal
+                      00013 ; de cuarzo a 4 MHz. Como cada ciclo máquina son 4 ciclos de reloj, resulta que cada
+                      00014 ; ciclo máquina tarda 4 x 1/4MHz = 1 µs.
+                      00015 ;
+                      00016 ; En los comentarios, "cm" significa "ciclos máquina".
+                      00017 ;
+                      00018 ; ZONA DE DATOS *********************************************************************
+                      00019 
+                      00020         CBLOCK
+  00000010            00021         R_ContA                         ; Contadores para los retardos.
+  00000011            00022         R_ContB
+  00000012            00023         R_ContC
+                      00024         ENDC
+                      00025 ;
+                      00026 ; RETARDOS de 4 hasta 10 microsegundos ---------------------------------------------------
+                      00027 ;
+                      00028 ; A continuación retardos pequeños teniendo en cuenta que para una frecuencia de 4 MHZ,
+                      00029 ; la llamada a subrutina "call" tarda 2 ciclos máquina, el retorno de subrutina
+                      00030 ; "return" toma otros 2 ciclos máquina y cada instrucción "nop" tarda 1 ciclo máquina.
+                      00031 ;
+00A8                  00032 Retardo_10micros                                ; La llamada "call" aporta 2 ciclos máquina.
+00A8   0000           00033         nop                             ; Aporta 1 ciclo máquina.
+00A9   0000           00034         nop                             ; Aporta 1 ciclo máquina.
+00AA   0000           00035         nop                             ; Aporta 1 ciclo máquina.
+00AB   0000           00036         nop                             ; Aporta 1 ciclo máquina.
+00AC   0000           00037         nop                             ; Aporta 1 ciclo máquina.
+00AD                  00038 Retardo_5micros                         ; La llamada "call" aporta 2 ciclos máquina.
+00AD   0000           00039         nop                             ; Aporta 1 ciclo máquina.
+00AE                  00040 Retardo_4micros                         ; La llamada "call" aporta 2 ciclos máquina.
+00AE   0008           00041         return                          ; El salto del retorno aporta 2 ciclos máquina.
+                      00042 ;
+                      00043 ; RETARDOS de 20 hasta 500 microsegundos ------------------------------------------------
+                      00044 ;
+00AF                  00045 Retardo_500micros                               ; La llamada "call" aporta 2 ciclos máquina.
+00AF   0000           00046         nop                             ; Aporta 1 ciclo máquina.
+00B0   30A4           00047         movlw   d'164'                  ; Aporta 1 ciclo máquina. Este es el valor de "K".
+00B1   28BB           00048         goto    RetardoMicros           ; Aporta 2 ciclos máquina.
+00B2                  00049 Retardo_200micros                               ; La llamada "call" aporta 2 ciclos máquina.
+00B2   0000           00050         nop                             ; Aporta 1 ciclo máquina.
+00B3   3040           00051         movlw   d'64'                   ; Aporta 1 ciclo máquina. Este es el valor de "K".
+00B4   28BB           00052         goto    RetardoMicros           ; Aporta 2 ciclos máquina.
+00B5                  00053 Retardo_100micros                               ; La llamada "call" aporta 2 ciclos máquina.
+00B5   301F           00054         movlw   d'31'                   ; Aporta 1 ciclo máquina. Este es el valor de "K".
+00B6   28BB           00055         goto    RetardoMicros           ; Aporta 2 ciclos máquina.
+00B7                  00056 Retardo_50micros                                ; La llamada "call" aporta 2 ciclos máquina.
+00B7   0000           00057         nop                             ; Aporta 1 ciclo máquina.
+00B8   300E           00058         movlw   d'14'                   ; Aporta 1 ciclo máquina. Este es el valor de "K".
+00B9   28BB           00059         goto    RetardoMicros           ; Aporta 2 ciclos máquina.
+00BA                  00060 Retardo_20micros                                ; La llamada "call" aporta 2 ciclos máquina.
+00BA   3005           00061         movlw   d'5'                    ; Aporta 1 ciclo máquina. Este es el valor de "K".
+                      00062 ;
+MPASM 03.50 Released                       I2C_DISPLAY_01.ASM   10-26-2003  19:28:43         PAGE  8
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00063 ; El próximo bloque "RetardoMicros" tarda:
+                      00064 ; 1 + (K-1) + 2 + (K-1)x2 + 2 = (2 + 3K) ciclos máquina.
+                      00065 ;
+00BB                  00066 RetardoMicros
+00BB   0090           00067         movwf   R_ContA                 ; Aporta 1 ciclo máquina.
+00BC                  00068 Rmicros_Bucle
+00BC   0B90           00069         decfsz  R_ContA,F               ; (K-1)x1 cm (cuando no salta) + 2 cm (al saltar).
+00BD   28BC           00070         goto    Rmicros_Bucle           ; Aporta (K-1)x2 ciclos máquina.
+00BE   0008           00071         return                          ; El salto del retorno aporta 2 ciclos máquina.
+                      00072 ;
+                      00073 ;En total estas subrutinas tardan:
+                      00074 ; - Retardo_500micros:  2 + 1 + 1 + 2 + (2 + 3K) = 500 cm = 500 µs. (para K=164 y 4 MHz).
+                      00075 ; - Retardo_200micros:  2 + 1 + 1 + 2 + (2 + 3K) = 200 cm = 200 µs. (para K= 64 y 4 MHz).
+                      00076 ; - Retardo_100micros:  2     + 1 + 2 + (2 + 3K) = 100 cm = 100 µs. (para K= 31 y 4 MHz).
+                      00077 ; - Retardo_50micros :  2 + 1 + 1 + 2 + (2 + 3K) =  50 cm =  50 µs. (para K= 14 y 4 MHz).
+                      00078 ; - Retardo_20micros :  2     + 1     + (2 + 3K) =  20 cm =  20 µs. (para K=  5 y 4 MHz).
+                      00079 ;
+                      00080 ; RETARDOS de 1 ms hasta 200 ms. --------------------------------------------------------
+                      00081 ;
+00BF                  00082 Retardo_200ms                           ; La llamada "call" aporta 2 ciclos máquina.
+00BF   30C8           00083         movlw   d'200'                  ; Aporta 1 ciclo máquina. Este es el valor de "M".
+00C0   28CE           00084         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+00C1                  00085 Retardo_100ms                           ; La llamada "call" aporta 2 ciclos máquina.
+00C1   3064           00086         movlw   d'100'                  ; Aporta 1 ciclo máquina. Este es el valor de "M".
+00C2   28CE           00087         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+00C3                  00088 Retardo_50ms                            ; La llamada "call" aporta 2 ciclos máquina.
+00C3   3032           00089         movlw   d'50'                   ; Aporta 1 ciclo máquina. Este es el valor de "M".
+00C4   28CE           00090         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+00C5                  00091 Retardo_20ms                            ; La llamada "call" aporta 2 ciclos máquina.
+00C5   3014           00092         movlw   d'20'                   ; Aporta 1 ciclo máquina. Este es el valor de "M".
+00C6   28CE           00093         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+00C7                  00094 Retardo_10ms                            ; La llamada "call" aporta 2 ciclos máquina.
+00C7   300A           00095         movlw   d'10'                   ; Aporta 1 ciclo máquina. Este es el valor de "M".
+00C8   28CE           00096         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+00C9                  00097 Retardo_5ms                             ; La llamada "call" aporta 2 ciclos máquina.
+00C9   3005           00098         movlw   d'5'                    ; Aporta 1 ciclo máquina. Este es el valor de "M".
+00CA   28CE           00099         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+00CB                  00100 Retardo_2ms                             ; La llamada "call" aporta 2 ciclos máquina.
+00CB   3002           00101         movlw   d'2'                    ; Aporta 1 ciclo máquina. Este es el valor de "M".
+00CC   28CE           00102         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+00CD                  00103 Retardo_1ms                             ; La llamada "call" aporta 2 ciclos máquina.
+00CD   3001           00104         movlw   d'1'                    ; Aporta 1 ciclo máquina. Este es el valor de "M".
+                      00105 ;
+                      00106 ; El próximo bloque "Retardos_ms" tarda:
+                      00107 ; 1 + M + M + KxM + (K-1)xM + Mx2 + (K-1)Mx2 + (M-1) + 2 + (M-1)x2 + 2 =
+                      00108 ; = (2 + 4M + 4KM) ciclos máquina. Para K=249 y M=1 supone 1002 ciclos máquina
+                      00109 ; que a 4 MHz son 1002 µs = 1 ms.
+                      00110 ;
+00CE                  00111 Retardos_ms
+00CE   0091           00112         movwf   R_ContB                 ; Aporta 1 ciclo máquina.
+00CF                  00113 R1ms_BucleExterno
+00CF   30F9           00114         movlw   d'249'                  ; Aporta Mx1 ciclos máquina. Este es el valor de "K".
+00D0   0090           00115         movwf   R_ContA                 ; Aporta Mx1 ciclos máquina.
+MPASM 03.50 Released                       I2C_DISPLAY_01.ASM   10-26-2003  19:28:43         PAGE  9
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+00D1                  00116 R1ms_BucleInterno
+00D1   0000           00117         nop                             ; Aporta KxMx1 ciclos máquina.
+00D2   0B90           00118         decfsz  R_ContA,F               ; (K-1)xMx1 cm (cuando no salta) + Mx2 cm (al saltar).
+00D3   28D1           00119         goto    R1ms_BucleInterno               ; Aporta (K-1)xMx2 ciclos máquina.
+00D4   0B91           00120         decfsz  R_ContB,F               ; (M-1)x1 cm (cuando no salta) + 2 cm (al saltar).
+00D5   28CF           00121         goto    R1ms_BucleExterno       ; Aporta (M-1)x2 ciclos máquina.
+00D6   0008           00122         return                          ; El salto del retorno aporta 2 ciclos máquina.
+                      00123 ;
+                      00124 ;En total estas subrutinas tardan:
+                      00125 ; - Retardo_200ms:      2 + 1 + 2 + (2 + 4M + 4KM) = 200007 cm = 200 ms. (M=200 y K=249).
+                      00126 ; - Retardo_100ms:      2 + 1 + 2 + (2 + 4M + 4KM) = 100007 cm = 100 ms. (M=100 y K=249).
+                      00127 ; - Retardo_50ms :      2 + 1 + 2 + (2 + 4M + 4KM) =  50007 cm =  50 ms. (M= 50 y K=249).
+                      00128 ; - Retardo_20ms :      2 + 1 + 2 + (2 + 4M + 4KM) =  20007 cm =  20 ms. (M= 20 y K=249).
+                      00129 ; - Retardo_10ms :      2 + 1 + 2 + (2 + 4M + 4KM) =  10007 cm =  10 ms. (M= 10 y K=249).
+                      00130 ; - Retardo_5ms  :      2 + 1 + 2 + (2 + 4M + 4KM) =   5007 cm =   5 ms. (M=  5 y K=249).
+                      00131 ; - Retardo_2ms  :      2 + 1 + 2 + (2 + 4M + 4KM) =   2007 cm =   2 ms. (M=  2 y K=249).
+                      00132 ; - Retardo_1ms  :      2 + 1     + (2 + 4M + 4KM) =   1005 cm =   1 ms. (M=  1 y K=249).
+                      00133 ;
+                      00134 ; RETARDOS de 0.5 hasta 20 segundos ---------------------------------------------------
+                      00135 ;
+00D7                  00136 Retardo_20s                             ; La llamada "call" aporta 2 ciclos máquina.
+00D7   30C8           00137         movlw   d'200'                  ; Aporta 1 ciclo máquina. Este es el valor de "N".
+00D8   28E2           00138         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+00D9                  00139 Retardo_10s                             ; La llamada "call" aporta 2 ciclos máquina.
+00D9   3064           00140         movlw   d'100'                  ; Aporta 1 ciclo máquina. Este es el valor de "N".
+00DA   28E2           00141         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+00DB                  00142 Retardo_5s                              ; La llamada "call" aporta 2 ciclos máquina.
+00DB   3032           00143         movlw   d'50'                   ; Aporta 1 ciclo máquina. Este es el valor de "N".
+00DC   28E2           00144         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+00DD                  00145 Retardo_2s                              ; La llamada "call" aporta 2 ciclos máquina.
+00DD   3014           00146         movlw   d'20'                   ; Aporta 1 ciclo máquina. Este es el valor de "N".
+00DE   28E2           00147         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+00DF                  00148 Retardo_1s                              ; La llamada "call" aporta 2 ciclos máquina.
+00DF   300A           00149         movlw   d'10'                   ; Aporta 1 ciclo máquina. Este es el valor de "N".
+00E0   28E2           00150         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+00E1                  00151 Retardo_500ms                           ; La llamada "call" aporta 2 ciclos máquina.
+00E1   3005           00152         movlw   d'5'                    ; Aporta 1 ciclo máquina. Este es el valor de "N".
+                      00153 ;
+                      00154 ; El próximo bloque "Retardo_1Decima" tarda:
+                      00155 ; 1 + N + N + MxN + MxN + KxMxN + (K-1)xMxN + MxNx2 + (K-1)xMxNx2 +
+                      00156 ;   + (M-1)xN + Nx2 + (M-1)xNx2 + (N-1) + 2 + (N-1)x2 + 2 =
+                      00157 ; = (2 + 4M + 4MN + 4KM) ciclos máquina. Para K=249, M=100 y N=1 supone 100011
+                      00158 ; ciclos máquina que a 4 MHz son 100011 µs = 100 ms = 0,1 s = 1 décima de segundo.
+                      00159 ;
+00E2                  00160 Retardo_1Decima
+00E2   0092           00161         movwf   R_ContC                 ; Aporta 1 ciclo máquina.
+00E3                  00162 R1Decima_BucleExterno2
+00E3   3064           00163         movlw   d'100'                  ; Aporta Nx1 ciclos máquina. Este es el valor de "M".
+00E4   0091           00164         movwf   R_ContB                 ; Aporta Nx1 ciclos máquina.
+00E5                  00165 R1Decima_BucleExterno
+00E5   30F9           00166         movlw   d'249'                  ; Aporta MxNx1 ciclos máquina. Este es el valor de "K".
+00E6   0090           00167         movwf   R_ContA                 ; Aporta MxNx1 ciclos máquina.
+00E7                  00168 R1Decima_BucleInterno          
+MPASM 03.50 Released                       I2C_DISPLAY_01.ASM   10-26-2003  19:28:43         PAGE 10
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+00E7   0000           00169         nop                             ; Aporta KxMxNx1 ciclos máquina.
+00E8   0B90           00170         decfsz  R_ContA,F               ; (K-1)xMxNx1 cm (si no salta) + MxNx2 cm (al saltar).
+00E9   28E7           00171         goto    R1Decima_BucleInterno   ; Aporta (K-1)xMxNx2 ciclos máquina.
+00EA   0B91           00172         decfsz  R_ContB,F               ; (M-1)xNx1 cm (cuando no salta) + Nx2 cm (al saltar).
+00EB   28E5           00173         goto    R1Decima_BucleExterno   ; Aporta (M-1)xNx2 ciclos máquina.
+00EC   0B92           00174         decfsz  R_ContC,F               ; (N-1)x1 cm (cuando no salta) + 2 cm (al saltar).
+00ED   28E3           00175         goto    R1Decima_BucleExterno2  ; Aporta (N-1)x2 ciclos máquina.
+00EE   0008           00176         return                          ; El salto del retorno aporta 2 ciclos máquina.
+                      00177 ;
+                      00178 ;En total estas subrutinas tardan:
+                      00179 ; - Retardo_20s:        2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) = 20000807 cm = 20 s.
+                      00180 ;                       (N=200, M=100 y K=249).
+                      00181 ; - Retardo_10s:        2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) = 10000407 cm = 10 s.
+                      00182 ;                       (N=100, M=100 y K=249).
+                      00183 ; - Retardo_5s:         2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) =  5000207 cm =  5 s.
+                      00184 ;                       (N= 50, M=100 y K=249).
+                      00185 ; - Retardo_2s:         2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) =  2000087 cm =  2 s.
+                      00186 ;                       (N= 20, M=100 y K=249).
+                      00187 ; - Retardo_1s:         2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) =  1000047 cm =  1 s.
+                      00188 ;                       (N= 10, M=100 y K=249).
+                      00189 ; - Retardo_500ms:      2 + 1     + (2 + 4N + 4MN + 4KMN) =   500025 cm = 0,5 s.
+                      00190 ;                       (N=  5, M=100 y K=249).
+                      00191 
+                      00192 ;       ===================================================================
+                      00193 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00194 ;         E. Palacios, F. Remiro y L. López.
+                      00195 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00196 ;       ===================================================================
+                      00197 
+                      00198 
+                      00199 
+                      00200 
+                      00053         END
+MPASM 03.50 Released                       I2C_DISPLAY_01.ASM   10-26-2003  19:28:43         PAGE 11
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+ASCII_a_7Segmentos                00000018
+C                                 00000000
+DC                                00000001
+Display7s_Dato                    0000000C
+EEADR                             00000009
+EECON1                            00000088
+EECON2                            00000089
+EEDATA                            00000008
+EEIE                              00000006
+EEIF                              00000004
+F                                 00000001
+FSR                               00000004
+FinTablaASCII                     0000005D
+GIE                               00000007
+I2C_ContadorBits                  0000000D
+I2C_Dato                          0000000E
+I2C_EnviaBit                      00000082
+I2C_EnviaByte                     0000007F
+I2C_EnviaCero                     00000085
+I2C_EnviaStart                    00000071
+I2C_EnviaStop                     00000079
+I2C_EnviaUno                      00000087
+I2C_Flags                         0000000F
+I2C_FlancoSCL                     00000088
+I2C_LeeBit                        00000097
+I2C_LeeByte                       00000094
+I2C_UltimoByteLeer                I2C_Flags,0
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+Inicio                            00000000
+InicioTablaASCII                  0000002D
+NOT_PD                            00000003
+NOT_RBPU                          00000007
+NOT_TO                            00000004
+Numero_a_7Segmentos               00000016
+OPTION_REG                        00000081
+PCL                               00000002
+PCLATH                            0000000A
+PORTA                             00000005
+PORTB                             00000006
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+Principal                         00000014
+R1Decima_BucleExterno             000000E5
+R1Decima_BucleExterno2            000000E3
+R1Decima_BucleInterno             000000E7
+R1ms_BucleExterno                 000000CF
+MPASM 03.50 Released                       I2C_DISPLAY_01.ASM   10-26-2003  19:28:43         PAGE 12
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+R1ms_BucleInterno                 000000D1
+RBIE                              00000003
+RBIF                              00000000
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+R_ContA                           00000010
+R_ContB                           00000011
+R_ContC                           00000012
+RetardoMicros                     000000BB
+Retardo_100micros                 000000B5
+Retardo_100ms                     000000C1
+Retardo_10micros                  000000A8
+Retardo_10ms                      000000C7
+Retardo_10s                       000000D9
+Retardo_1Decima                   000000E2
+Retardo_1ms                       000000CD
+Retardo_1s                        000000DF
+Retardo_200micros                 000000B2
+Retardo_200ms                     000000BF
+Retardo_20micros                  000000BA
+Retardo_20ms                      000000C5
+Retardo_20s                       000000D7
+Retardo_2ms                       000000CB
+Retardo_2s                        000000DD
+Retardo_4micros                   000000AE
+Retardo_500micros                 000000AF
+Retardo_500ms                     000000E1
+Retardo_50micros                  000000B7
+Retardo_50ms                      000000C3
+Retardo_5micros                   000000AD
+Retardo_5ms                       000000C9
+Retardo_5s                        000000DB
+Retardos_ms                       000000CE
+Rmicros_Bucle                     000000BC
+SAA1064_Direccion                 00000070
+SCL                               PORTA,3
+SCL_AltaImpedancia                0000006B
+SCL_Bajo                          00000066
+SCL_EsperaNivelAlto               0000006E
+SDA                               PORTA,4
+SDA_AltaImpedancia                00000062
+SDA_Bajo                          0000005D
+STATUS                            00000003
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+TMR0                              00000001
+TRISA                             00000085
+TRISB                             00000086
+W                                 00000000
+WR                                00000001
+MPASM 03.50 Released                       I2C_DISPLAY_01.ASM   10-26-2003  19:28:43         PAGE 13
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_CP_OFF                           00003FFF
+_CP_ON                            0000000F
+_HS_OSC                           00003FFE
+_LP_OSC                           00003FFC
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC                           00003FFF
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FFD
+__16F84A                          00000001
+
+
+MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
+
+0000 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0040 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0080 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+00C0 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXX- ----------------
+2000 : -------X-------- ---------------- ---------------- ----------------
+
+All other memory blocks unused.
+
+Program Memory Words Used:   239
+Program Memory Words Free:   785
+
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :     0 reported,     0 suppressed
+
+

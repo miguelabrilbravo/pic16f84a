@@ -1,0 +1,201 @@
+MPASM 03.50 Released                               BCD_01.ASM   10-15-2003  11:26:43         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;************************************ BCD_01.asm ****************************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Un número binario de 8 bits es convertido a BCD. El resultado se guarda en tres posiciones
+                      00010 ; de memorias llamadas Centenas, Decenas y Unidades. Además al final las unidades estarán en el
+                      00011 ; nibble bajo del registro W y las decenas en el nibble alto. En los diodos LEDs conectados al
+                      00012 ; puerto de salida se visualizarán las decenas y las unidades.
+                      00013 ;
+                      00014 ; El máximo número a convertir será el 255 que es el máximo valor que puede adquirir el
+                      00015 ; número binario de entrada de 8 bits. 
+                      00016 ;
+                      00017 ; El procedimiento utilizado es mediante restas de 10 tal como se explica en el siguiente
+                      00018 ; ejemplo que trata de la conversión del número 124 a BCD:
+                      00019 ;
+                      00020 ; (Centenas)    (Decenas)       (Unidades)      ¿(Unidades)<10? ¿(Decenas)=10?
+                      00021 ;
+                      00022 ;    0             0               124          NO, resta 10    Incrementa (Decenas).
+                      00023 ;    0             1               114          NO, resta 10    NO. Incrementa (Decenas).
+                      00024 ;    0             2               104          NO, resta 10    NO. Incrementa (Decenas).
+                      00025 ;    0             3                94          NO, resta 10    NO. Incrementa (Decenas).
+                      00026 ;    0             4                84          NO, resta 10    NO. Incrementa (Decenas).
+                      00027 ;    0             5                74          NO, resta 10    NO. Incrementa (Decenas).
+                      00028 ;    0             6                64          NO, resta 10    NO. Incrementa (Decenas).
+                      00029 ;    0             7                54          NO, resta 10    NO. Incrementa (Decenas).
+                      00030 ;    0             8                44          NO, resta 10    NO. Incrementa (Decenas).
+                      00031 ;    0             9                34          NO, resta 10    NO. Incrementa (Decenas).
+                      00032 ;    1             0                24          NO, resta 10    Sí. (Decenas)=0, y además
+                      00033 ;                                                                   incrementa (Centenas)
+                      00034 ;    1             1                14          NO, resta 10    NO. Incrementa (Decenas)
+                      00035 ;    1             2                 4          Si, se acabó. 
+                      00036 ;
+                      00037 ; El número a convertir será la constante "Numero".
+                      00038 ;
+                      00039 ; ZONA DE DATOS **********************************************************************
+                      00040 
+2007   3FF1           00041         __CONFIG   _CP_OFF &  _WDT_OFF & _PWRTE_ON & _XT_OSC
+                      00042         LIST       P=16F84A
+                      00043         INCLUDE  <P16F84A.INC>
+                      00001         LIST
+                      00002 ; P16F84A.INC  Standard Header File, Version 2.00    Microchip Technology, Inc.
+                      00134         LIST
+                      00044 
+                      00045         CBLOCK  0x0C                    ; La zona de memoria de usuario comienza en esta
+  0000000C            00046         Centenas                                ; dirección de memoria RAM de datos.
+  0000000D            00047         Decenas                         ; Posición 0x0D de RAM.
+  0000000E            00048         Unidades                                ; Posición 0x0E de RAM. 
+                      00049         ENDC
+                      00050 
+MPASM 03.50 Released                               BCD_01.ASM   10-15-2003  11:26:43         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+  0000007C            00051 Numero  EQU     .124                    ; Por ejemplo.
+                      00052 
+                      00053 ; ZONA DE CÓDIGOS ********************************************************************
+                      00054 
+0000                  00055         ORG     0                       ; El programa comienza en la dirección 0.
+0000                  00056 Inicio
+0000   1683           00057         bsf     STATUS,RP0              ; Acceso al Banco 1.
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0001   0186           00058         clrf    TRISB                   ; Las líneas del Puerto B se configuran como salida.
+0002   1283           00059         bcf     STATUS,RP0              ; Acceso al Banco 0.
+0003                  00060 Principal
+0003   018C           00061         clrf    Centenas                        ; Carga los registros con el resultado inicial.
+0004   018D           00062         clrf    Decenas                 ; En principio (Centenas)=0 y (Decenas)=0.
+0005   307C           00063         movlw   Numero
+0006   008E           00064         movwf   Unidades                        ; Se carga el número binario a convertir.
+0007                  00065 BCD_Resta10
+0007   300A           00066         movlw   .10                     ; A las unidades se le va restando 10 en cada
+0008   020E           00067         subwf   Unidades,W              ; pasada. (W)=(Unidades)-10.
+0009   1C03           00068         btfss   STATUS,C                ; ¿(C)=1?, ¿(W) positivo?, ¿(Unidades)>=10?.
+000A   2814           00069         goto    BIN_BCD_Fin             ; No, es menor de 10. Se acabó.
+000B                  00070 BCD_IncrementaDecenas
+000B   008E           00071         movwf   Unidades                        ; Recupera lo que queda por restar.
+000C   0A8D           00072         incf    Decenas,F               ; Incrementa las decenas y comprueba si llega a
+000D   300A           00073         movlw   .10                     ; 10. Lo hace mediante una resta.
+000E   020D           00074         subwf   Decenas,W               ; (W)= (Decenas)-10.
+000F   1C03           00075         btfss   STATUS,C                ;  ¿(C)=1?, ¿(W) positivo?, ¿(Decenas)>=10?.
+0010   2807           00076         goto    BCD_Resta10             ; No. Vuelve a dar otra pasada, restándole 10.
+0011                  00077 BCD_IncrementaCentenas
+0011   018D           00078         clrf    Decenas                 ; Pone a cero las decenas 
+0012   0A8C           00079         incf    Centenas,F              ; e incrementa las centenas.
+0013   2807           00080         goto    BCD_Resta10             ; Otra pasada, resta 10 al número a convertir.
+0014                  00081 BIN_BCD_Fin
+0014   0E0D           00082         swapf   Decenas,W               ; En el nibble alto de W también las decenas.
+0015   070E           00083         addwf   Unidades,W              ; En el nibble bajo de W las unidades.
+0016   0086           00084         movwf   PORTB                   ; Se visualiza por el puerto de salida.
+0017   2817           00085         goto    $                       ; Se queda permanentemente en este bucle.
+                      00086 
+                      00087         END                             ; Fin del programa.
+MPASM 03.50 Released                               BCD_01.ASM   10-15-2003  11:26:43         PAGE  3
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+BCD_IncrementaCentenas            00000011
+BCD_IncrementaDecenas             0000000B
+BCD_Resta10                       00000007
+BIN_BCD_Fin                       00000014
+C                                 00000000
+Centenas                          0000000C
+DC                                00000001
+Decenas                           0000000D
+EEADR                             00000009
+EECON1                            00000088
+EECON2                            00000089
+EEDATA                            00000008
+EEIE                              00000006
+EEIF                              00000004
+F                                 00000001
+FSR                               00000004
+GIE                               00000007
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+Inicio                            00000000
+NOT_PD                            00000003
+NOT_RBPU                          00000007
+NOT_TO                            00000004
+Numero                            0000007C
+OPTION_REG                        00000081
+PCL                               00000002
+PCLATH                            0000000A
+PORTA                             00000005
+PORTB                             00000006
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+Principal                         00000003
+RBIE                              00000003
+RBIF                              00000000
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+STATUS                            00000003
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+TMR0                              00000001
+TRISA                             00000085
+TRISB                             00000086
+Unidades                          0000000E
+W                                 00000000
+MPASM 03.50 Released                               BCD_01.ASM   10-15-2003  11:26:43         PAGE  4
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_CP_OFF                           00003FFF
+_CP_ON                            0000000F
+_HS_OSC                           00003FFE
+_LP_OSC                           00003FFC
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC                           00003FFF
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FFD
+__16F84A                          00000001
+
+
+MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
+
+0000 : XXXXXXXXXXXXXXXX XXXXXXXX-------- ---------------- ----------------
+2000 : -------X-------- ---------------- ---------------- ----------------
+
+All other memory blocks unused.
+
+Program Memory Words Used:    24
+Program Memory Words Free:  1000
+
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :     1 reported,     0 suppressed
+
+

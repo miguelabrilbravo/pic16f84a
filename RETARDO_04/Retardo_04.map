@@ -1,0 +1,98 @@
+MPLINK 4.49, Linker
+Linker Map File - Created Sun Jun 11 20:44:24 2023
+
+                                 Section Info
+                  Section       Type    Address   Location Size(Bytes)
+                ---------  ---------  ---------  ---------  ---------
+                   .org_0       code   0x000000    program   0x000000
+                   .org_1       code   0x000000    program   0x00009e
+.config_2007_RETARDO_04.O       code   0x002007    program   0x000002
+
+
+
+                              Program Memory Usage 
+                               Start         End      
+                           ---------   ---------      
+                            0x000000    0x00004e      
+                            0x002007    0x002007      
+            80 out of 1094 program addresses used, program memory utilization is 7%
+
+
+
+                              Symbols - Sorted by Name
+                     Name    Address   Location    Storage File                     
+                ---------  ---------  ---------  --------- ---------                
+                   Inicio   0x000000    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\Retardo_04.asm
+                Principal   0x000005    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\Retardo_04.asm
+    R1Decima_BucleExterno   0x000045    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+   R1Decima_BucleExterno2   0x000043    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+    R1Decima_BucleInterno   0x000047    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+        R1ms_BucleExterno   0x00002f    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+        R1ms_BucleInterno   0x000031    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+            RetardoMicros   0x00001b    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+        Retardo_100micros   0x000015    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+            Retardo_100ms   0x000021    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+         Retardo_10micros   0x000008    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+             Retardo_10ms   0x000027    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+              Retardo_10s   0x000039    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+          Retardo_1Decima   0x000042    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+              Retardo_1ms   0x00002d    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+               Retardo_1s   0x00003f    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+        Retardo_200micros   0x000012    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+            Retardo_200ms   0x00001f    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+         Retardo_20micros   0x00001a    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+             Retardo_20ms   0x000025    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+              Retardo_20s   0x000037    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+              Retardo_2ms   0x00002b    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+               Retardo_2s   0x00003d    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+          Retardo_4micros   0x00000e    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+        Retardo_500micros   0x00000f    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+            Retardo_500ms   0x000041    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+         Retardo_50micros   0x000017    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+             Retardo_50ms   0x000023    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+          Retardo_5micros   0x00000d    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+              Retardo_5ms   0x000029    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+               Retardo_5s   0x00003b    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+              Retardos_ms   0x00002e    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+            Rmicros_Bucle   0x00001c    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+
+
+
+                              Symbols - Sorted by Address
+                     Name    Address   Location    Storage File                     
+                ---------  ---------  ---------  --------- ---------                
+                   Inicio   0x000000    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\Retardo_04.asm
+                Principal   0x000005    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\Retardo_04.asm
+         Retardo_10micros   0x000008    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+          Retardo_5micros   0x00000d    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+          Retardo_4micros   0x00000e    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+        Retardo_500micros   0x00000f    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+        Retardo_200micros   0x000012    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+        Retardo_100micros   0x000015    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+         Retardo_50micros   0x000017    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+         Retardo_20micros   0x00001a    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+            RetardoMicros   0x00001b    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+            Rmicros_Bucle   0x00001c    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+            Retardo_200ms   0x00001f    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+            Retardo_100ms   0x000021    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+             Retardo_50ms   0x000023    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+             Retardo_20ms   0x000025    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+             Retardo_10ms   0x000027    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+              Retardo_5ms   0x000029    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+              Retardo_2ms   0x00002b    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+              Retardo_1ms   0x00002d    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+              Retardos_ms   0x00002e    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+        R1ms_BucleExterno   0x00002f    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+        R1ms_BucleInterno   0x000031    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+              Retardo_20s   0x000037    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+              Retardo_10s   0x000039    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+               Retardo_5s   0x00003b    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+               Retardo_2s   0x00003d    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+               Retardo_1s   0x00003f    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+            Retardo_500ms   0x000041    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+          Retardo_1Decima   0x000042    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+   R1Decima_BucleExterno2   0x000043    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+    R1Decima_BucleExterno   0x000045    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+    R1Decima_BucleInterno   0x000047    program     static E:\00.-MPLAB\00.-PIC16F84A\RETARDO_04\RETARDOS.INC
+
+

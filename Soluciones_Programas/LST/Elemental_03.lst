@@ -1,0 +1,143 @@
+MPASM 03.50 Released                         ELEMENTAL_03.ASM   10-15-2003  11:06:04         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;*********************************** Elemental_03.asm ************************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Por el Puerto B obtiene el dato del Puerto A, pero en las salida los bits pares se
+                      00010 ; fijan siempre a "1". El orden de los bits será "b7 b6 b5 b4 b3 b2 b1 b0", siendo los 
+                      00011 ; pares el b6, b4, b2 y el b0.
+                      00012 ;
+                      00013 ; Por ejemplo, si por el Puerto A se introduce el dato b'---01100', por el Puerto B se
+                      00014 ; visualiza  b'01011101'. Observar que los bits pares están a "1" (efectivamente:
+                      00015 ; Puerto B = b'x1x1x1x1') y los impares permanecen con el dato del puerto de entrada
+                      00016 ; (efectivamente: Puerto A = b'---x1x0x' y Puerto B = b'xxxx1x0x'). 
+                      00017 
+                      00018 ; ZONA DE DATOS *********************************************************************
+                      00019 
+2007   3FF1           00020         __CONFIG   _CP_OFF &  _WDT_OFF & _PWRTE_ON & _XT_OSC
+                      00021         LIST       P=16F84A             ; Procesador utilizado.
+                      00022         INCLUDE  <P16F84A.INC>          ; Definición de algunos operandos utilizados.
+                      00001         LIST
+                      00002 ; P16F84A.INC  Standard Header File, Version 2.00    Microchip Technology, Inc.
+                      00134         LIST
+                      00023 
+  00000055            00024 Mascara EQU     b'01010101'             ; Máscara de bits pares siempre a "1".
+                      00025 
+                      00026 ; ZONA DE CÓDIGOS *******************************************************************
+                      00027 
+0000                  00028         ORG     0                       ; El programa comienza en la dirección 0.
+0000                  00029 Inicio
+0000   1683           00030         bsf     STATUS,RP0              ; Pone a 1 el bit 5 del STATUS. Acceso al Banco 1.
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0001   0186           00031         clrf    TRISB                   ; Las líneas del Puerto B se configuran como salidas.
+0002   301F           00032         movlw   b'00011111'
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0003   0085           00033         movwf   TRISA                   ; Las líneas del Puerto A se configuran como entradas.
+0004   1283           00034         bcf     STATUS,RP0              ; Pone a 0 el bit 5 de STATUS. Acceso al Banco 0.
+0005                  00035 Principal
+0005   0805           00036         movf    PORTA,W                 ; Carga el registro de datos del Puerto A en W.
+0006   3855           00037         iorlw   Mascara                 ; Pone a "1" los bits pares.
+0007   0086           00038         movwf   PORTB                   ; El contenido de W se deposita en el Puerto B.
+0008   2805           00039         goto    Principal               ; Crea un bucle cerrado e infinito.
+                      00040 
+                      00041         END                             ; Fin del programa.
+MPASM 03.50 Released                         ELEMENTAL_03.ASM   10-15-2003  11:06:04         PAGE  2
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+C                                 00000000
+DC                                00000001
+EEADR                             00000009
+EECON1                            00000088
+EECON2                            00000089
+EEDATA                            00000008
+EEIE                              00000006
+EEIF                              00000004
+F                                 00000001
+FSR                               00000004
+GIE                               00000007
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+Inicio                            00000000
+Mascara                           00000055
+NOT_PD                            00000003
+NOT_RBPU                          00000007
+NOT_TO                            00000004
+OPTION_REG                        00000081
+PCL                               00000002
+PCLATH                            0000000A
+PORTA                             00000005
+PORTB                             00000006
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+Principal                         00000005
+RBIE                              00000003
+RBIF                              00000000
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+STATUS                            00000003
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+TMR0                              00000001
+TRISA                             00000085
+TRISB                             00000086
+W                                 00000000
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_CP_OFF                           00003FFF
+_CP_ON                            0000000F
+_HS_OSC                           00003FFE
+MPASM 03.50 Released                         ELEMENTAL_03.ASM   10-15-2003  11:06:04         PAGE  3
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+_LP_OSC                           00003FFC
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC                           00003FFF
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FFD
+__16F84A                          00000001
+
+
+MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
+
+0000 : XXXXXXXXX------- ---------------- ---------------- ----------------
+2000 : -------X-------- ---------------- ---------------- ----------------
+
+All other memory blocks unused.
+
+Program Memory Words Used:     9
+Program Memory Words Free:  1015
+
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :     2 reported,     0 suppressed
+
+

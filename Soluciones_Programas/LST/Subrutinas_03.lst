@@ -1,0 +1,210 @@
+MPASM 03.50 Released                        SUBRUTINAS_03.ASM   10-15-1982  12:09:13         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;*********************************** Subrutinas_03.asm **********************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; El valor del puerto de entrada PORTA es convertido a BCD y el resultado se visualiza
+                      00010 ; por el puerto de salida PORTB. Así por ejemplo, si por el PORTA se lee "---10111",
+                      00011 ; (23 en decimal) por el PORTB se visualizará "00100011".
+                      00012 ;
+                      00013 ; ZONA DE DATOS **********************************************************************
+                      00014 
+2007   3FF1           00015         __CONFIG   _CP_OFF &  _WDT_OFF & _PWRTE_ON & _XT_OSC
+                      00016         LIST       P=16F84A
+                      00017         INCLUDE  <P16F84A.INC>
+                      00001         LIST
+                      00002 ; P16F84A.INC  Standard Header File, Version 2.00    Microchip Technology, Inc.
+                      00134         LIST
+                      00018 
+                      00019         CBLOCK  0x0C                    ; En esta posición empieza la RAM de usuario.
+                      00020         ENDC
+                      00021 
+                      00022 ; ZONA DE CÓDIGOS ********************************************************************
+                      00023 
+0000                  00024         ORG     0                       ; El programa comienza en la dirección 0.
+0000                  00025 Inicio
+0000   1683           00026         bsf     STATUS,RP0              ; Acceso al Banco 1.
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0001   0186           00027         clrf    TRISB                   ; Las líneas del Puerto B se configuran como salida.
+0002   301F           00028         movlw   b'00011111'             ; Las 5 líneas del Puerto A se configuran como entrada.
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0003   0085           00029         movwf   TRISA
+0004   1283           00030         bcf     STATUS,RP0              ; Acceso al Banco 0.
+0005                  00031 Principal
+0005   0805           00032         movf    PORTA,W                 ; Carga el número a convertir.
+0006   2009           00033         call    BIN_a_BCD               ; Lo pasa a BCD.
+0007   0086           00034         movwf   PORTB                   ; Resultado se visualiza por el puerto de salida.
+0008   2805           00035         goto    Principal               ; Se queda permanentemente en este bucle.
+                      00036 
+                      00037         INCLUDE  <BIN_BCD.INC>          ; La subrutina se añadirá al final del programa
+                      00001 ;******************************** Librería "BIN_BCD.INC" ********************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Un número binario natural de 8 bits es convertido a BCD. El resultado se guarda en tres
+                      00010 ; posiciones de memorias llamadas: BCD_Centenas, BCD_Decenas y BCD_Unidades.
+                      00011 ;
+MPASM 03.50 Released                        SUBRUTINAS_03.ASM   10-15-1982  12:09:13         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00012 ; El procedimiento utilizado es mediante restas de 10 tal como se explicó en el capítulo 9.
+                      00013 ;
+                      00014 ; Entrada:      En el registro W el número binario natural a convertir.
+                      00015 ; Salidas:      En (BCD_Centenas), (BCD_Decenas) y (BCD_Unidades).
+                      00016 ;               En el registro W también las decenas (nibble alto) y unidades (nibble bajo).
+                      00017 
+                      00018 ; Subrutina "BIN_a_BCD" -----------------------------------------------------------------
+                      00019 
+                      00020         CBLOCK                          ; En las subrutinas no se debe fijar la dirección
+  0000000C            00021         BCD_Centenas                    ; de la RAM de usuario. Se toma a continuación de
+  0000000D            00022         BCD_Decenas                     ; la última asignada.
+  0000000E            00023         BCD_Unidades    
+                      00024         ENDC
+                      00025 ;
+0009                  00026 BIN_a_BCD
+0009   018C           00027         clrf    BCD_Centenas            ; Carga los registros con el resultado inicial.
+000A   018D           00028         clrf    BCD_Decenas             ; En principio las centenas y decenas a cero.
+000B   008E           00029         movwf   BCD_Unidades            ; Se carga el número binario a convertir.
+000C                  00030 BCD_Resta10
+000C   300A           00031         movlw   .10                     ; A las unidades se le va restando 10 en cada
+000D   020E           00032         subwf   BCD_Unidades,W          ; pasada. (W)=(BCD_Unidades) -10.
+000E   1C03           00033         btfss   STATUS,C                ; ¿C = 1?, ¿(W) positivo?, ¿(BCD_Unidades)>=10?.
+000F   2819           00034         goto    BIN_BCD_Fin             ; No, es menor de 10. Se acabó.
+0010                  00035 BCD_IncrementaDecenas
+0010   008E           00036         movwf   BCD_Unidades            ; Recupera lo que queda por restar.
+0011   0A8D           00037         incf    BCD_Decenas,F           ; Incrementa las decenas y comprueba si ha llegado
+0012   300A           00038         movlw   .10                     ; a 10. Lo hace mediante una resta.
+0013   020D           00039         subwf   BCD_Decenas,W           ; (W)=(BCD_Decenas)-10).
+0014   1C03           00040         btfss   STATUS,C                ; ¿C = 1?, ¿(W) positivo?, ¿(BCD_Decenas)>=10?.
+0015   280C           00041         goto    BCD_Resta10             ; No. Vuelve a dar otra pasada, restándole 10 a
+0016                  00042 BCD_IncrementaCentenas                  ; las unidades.
+0016   018D           00043         clrf    BCD_Decenas             ; Pone a cero las decenas 
+0017   0A8C           00044         incf    BCD_Centenas,F          ; e incrementa las centenas.
+0018   280C           00045         goto    BCD_Resta10             ; Otra pasada: Resta 10 al número a convertir.
+0019                  00046 BIN_BCD_Fin
+0019   0E0D           00047         swapf   BCD_Decenas,W           ; En el nibble alto de (W) también las decenas.
+001A   070E           00048         addwf   BCD_Unidades,W          ; En el nibble bajo de (W) las unidades.
+001B   0008           00049         return                          ; Vuelve al programa principal.
+                      00050         
+                      00051 ; La directiva "END" se debe poner en el programa principal, no aquí.
+                      00052 
+                      00053 ;       ===================================================================
+                      00054 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00055 ;         E. Palacios, F. Remiro y L. López.
+                      00056 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00057 ;       ===================================================================
+                      00038         END                             ; principal.
+MPASM 03.50 Released                        SUBRUTINAS_03.ASM   10-15-1982  12:09:13         PAGE  3
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+BCD_Centenas                      0000000C
+BCD_Decenas                       0000000D
+BCD_IncrementaCentenas            00000016
+BCD_IncrementaDecenas             00000010
+BCD_Resta10                       0000000C
+BCD_Unidades                      0000000E
+BIN_BCD_Fin                       00000019
+BIN_a_BCD                         00000009
+C                                 00000000
+DC                                00000001
+EEADR                             00000009
+EECON1                            00000088
+EECON2                            00000089
+EEDATA                            00000008
+EEIE                              00000006
+EEIF                              00000004
+F                                 00000001
+FSR                               00000004
+GIE                               00000007
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+Inicio                            00000000
+NOT_PD                            00000003
+NOT_RBPU                          00000007
+NOT_TO                            00000004
+OPTION_REG                        00000081
+PCL                               00000002
+PCLATH                            0000000A
+PORTA                             00000005
+PORTB                             00000006
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+Principal                         00000005
+RBIE                              00000003
+RBIF                              00000000
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+STATUS                            00000003
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+TMR0                              00000001
+TRISA                             00000085
+TRISB                             00000086
+W                                 00000000
+MPASM 03.50 Released                        SUBRUTINAS_03.ASM   10-15-1982  12:09:13         PAGE  4
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_CP_OFF                           00003FFF
+_CP_ON                            0000000F
+_HS_OSC                           00003FFE
+_LP_OSC                           00003FFC
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC                           00003FFF
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FFD
+__16F84A                          00000001
+
+
+MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
+
+0000 : XXXXXXXXXXXXXXXX XXXXXXXXXXXX---- ---------------- ----------------
+2000 : -------X-------- ---------------- ---------------- ----------------
+
+All other memory blocks unused.
+
+Program Memory Words Used:    28
+Program Memory Words Free:   996
+
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :     2 reported,     0 suppressed
+
+

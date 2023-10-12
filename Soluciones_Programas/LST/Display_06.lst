@@ -1,0 +1,275 @@
+MPASM 03.50 Released                           DISPLAY_06.ASM   10-15-1982  12:37:06         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;************************************* Display_06.asm ***********************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Visualiza por el display conectado a la salida, un carácter determinado dentro de un
+                      00010 ; mensaje grabado en la memoria ROM de programa mediante la directiva "DT". El número del
+                      00011 ; carácter a visualizar será la cantidad leída por la entrada.
+                      00012 ;
+                      00013 ; Así por ejemplo, si el texto grabado en la ROM es: "ESTUDIA ELECTRONICA" y la cantidad
+                      00014 ; leída por la entrada es "---01001" (9 en decimal), por el display aparecerá "L" que es
+                      00015 ; el carácter situado en el lugar 9 del mensaje, (la primera letra "E" está en el lugar 0).
+                      00016 ;
+                      00017 ; Si el número de caracteres del mensaje es menor que la cantidad de entrada, se encenderá
+                      00018 ; el punto decimal.
+                      00019 ;
+                      00020 ; ZONA DE DATOS **********************************************************************
+                      00021 
+2007   3FF1           00022         __CONFIG   _CP_OFF &  _WDT_OFF & _PWRTE_ON & _XT_OSC
+                      00023         LIST       P=16F84A
+                      00024         INCLUDE  <P16F84A.INC>
+                      00001         LIST
+                      00002 ; P16F84A.INC  Standard Header File, Version 2.00    Microchip Technology, Inc.
+                      00134         LIST
+                      00025 
+                      00026         CBLOCK  0x0C                    ; En esta posición empieza la RAM de usuario.
+                      00027         ENDC
+                      00028 
+                      00029 ; ZONA DE CÓDIGOS ********************************************************************
+                      00030 
+0000                  00031         ORG     0                       ; El programa comienza en la dirección 0.
+0000                  00032 Inicio
+0000   1683           00033         bsf     STATUS,RP0              ; Acceso al Banco 1.
+0001   0186           00034         clrf    PORTB                   ; Las líneas del Puerto B se configuran como salida.
+0002   301F           00035         movlw   b'00011111'             ; Las 5 líneas del Puerto A se configuran como entrada.
+0003   0085           00036         movwf   PORTA
+0004   1283           00037         bcf     STATUS,RP0              ; Acceso al Banco 0.
+0005                  00038 Principal
+0005   3013           00039         movlw   (MensajeFin-MensajeInicio)      ; Halla la longitud del mensaje.
+0006   0205           00040         subwf   PORTA,W                 ; (W)=(PORTA)-Longitud Mensaje.
+0007   1803           00041         btfsc   STATUS,C                ; ¿C=0?, ¿(W) negativo?, ¿(PORTA)<Longitud Mensaje?.
+0008   280D           00042         goto    MensajeMenor            ; No. Entonces la entrada se pasa de valor.
+0009   0805           00043         movf    PORTA,W                 ; Lee el número de carácter dentro del mensaje.
+000A   2010           00044         call    LeeCaracter             ; Obtiene el carácter dentro del mensaje y lo
+000B   2026           00045         call    ASCII_a_7Segmentos      ; pasa a código de 7 segmentos.
+000C   280E           00046         goto    ActivarSalida
+000D                  00047 MensajeMenor
+000D   3080           00048         movlw   b'10000000'             ; Como el mensaje es de menor longitud que el número de
+000E                  00049 ActivarSalida                           ; carácter solicitado, se enciende el punto decimal.
+000E   0086           00050         movwf   PORTB                   ; Resultado se visualiza por el puerto de salida.
+MPASM 03.50 Released                           DISPLAY_06.ASM   10-15-1982  12:37:06         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+000F   2805           00051         goto    Principal
+                      00052 ;
+                      00053 ; Subrutina "LeeCaracter" ---------------------------------------------------------------
+                      00054 ;
+0010                  00055 LeeCaracter
+0010   0782           00056         addwf   PCL,F
+0011                  00057 MensajeInicio                           ; Indica la posición inicial del mensaje.
+0011   3445 3453 3454 00058         DT      "ESTUDIA ELECTRONICA"
+       3455 3444 3449 
+       3441 3420 3445 
+       344C 3445 3443 
+       3454 3452 344F 
+       344E 3449 3443 
+       3441 
+0024                  00059 MensajeFin                              ; Indicar la posición final del mensaje.
+                      00060 ;
+                      00061         INCLUDE  <DISPLAY_7S.INC>       ; Subrutina "ASCII_a_7Segmentos".
+                      00001 ;**************************** Librería "DISPLAY_7S.INC **********************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Subrutinas para convertir un código ASCII en su valor equivalente en 7 segmentos y así
+                      00010 ; poder activar displays.
+                      00011 ;
+                      00012 ; Si el código ASCII es menor que el signo más '+' o mayor  que la letra zeta 'Z' obtiene
+                      00013 ; el código erróneo b'10000000' para encender sólo el punto decimal del display.
+                      00014 ;
+                      00015 ; Si se trata de un número hay que ejecutar la subrutina "Numero_a_7Segmentos" que convierte
+                      00016 ; un numero (de 0 a 9) en su equivalente en código de 7 segmentos.
+                      00017 ;
+                      00018 ; Entrada: En registro W, el dato en código ASCII a convertir.
+                      00019 ; Salida : En registro W, el código 7 segmentos.
+                      00020 
+                      00021         CBLOCK
+  0000000C            00022         Display7s_Dato                  ; Aquí se reservará el valor del dato de entrada.
+                      00023         ENDC
+                      00024         
+0024                  00025 Numero_a_7Segmentos
+0024   390F           00026         andlw   b'00001111'             ; Se queda con el nibble bajo.
+0025   3E30           00027         addlw   '0'                     ; Se pasa a ASCII sumándole el valor ASCII
+                      00028                                         ; del "0" y ejecuta "ASCII_7_Segmentos".
+0026                  00029 ASCII_a_7Segmentos
+0026   008C           00030         movwf   Display7s_Dato          ; Guarda el valor del carácter.
+0027   3C20           00031         sublw   ' '                     ; Comprueba si es " " (espacio).
+0028   1903           00032         btfsc   STATUS,Z                ; ¿Es distinta de " " (espacio)?, ¿Z=0?.
+0029   3400           00033         retlw   00h                     ; Es " ". Devuelve el código 7-Segmentos del " ".
+002A   080C           00034         movf    Display7s_Dato,W                ; Recupera el valor del dato de entrada.
+002B   3CD1           00035         sublw   'Ñ'                     ; Comprueba si es "Ñ".
+002C   1903           00036         btfsc   STATUS,Z                ; ¿Es distinta de "Ñ"?, ¿Z=0?.
+MPASM 03.50 Released                           DISPLAY_06.ASM   10-15-1982  12:37:06         PAGE  3
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+002D   3455           00037         retlw   55h                     ; Es "Ñ". Devuelve el código 7-Segmentos de "Ñ".
+002E   080C           00038         movf    Display7s_Dato,W                ; Recupera el valor del dato de entrada.
+002F   3CBA           00039         sublw   'º'                     ; Comprueba si es "º".
+0030   1903           00040         btfsc   STATUS,Z                ; ¿Es distinta de "º"?, ¿Z=0?.
+0031   3463           00041         retlw   63h                     ; Es "º". Devuelve el código 7-Segmentos de "º".
+                      00042 ;
+0032   080C           00043         movf    Display7s_Dato,W                ; Comprueba si el código ASCII es mayor que la "Z".
+0033   3C5A           00044         sublw   'Z'                     ; (W)='Z'-(Display7s_Dato)
+0034   1C03           00045         btfss   STATUS,C                ; ¿C=1?, ¿(W) positivo?, ¿'Z'>=(Display7s_Dato)?.
+0035   3480           00046         retlw   b'10000000'             ; Si el código ASCII es mayor que 'Z' es un error.
+0036   302B           00047         movlw   '+'                     ; Averigua en qué orden está el carácter leído
+0037   020C           00048         subwf   Display7s_Dato,W                ; dentro de la tabla de conversión, respecto del
+0038   1C03           00049         btfss   STATUS,C                ; primero que es '+'.
+0039   3480           00050         retlw   b'10000000'             ; Si el código ASCII es menor que '+' es un error.
+                      00051 ;
+003A   0782           00052         addwf   PCL,F                   ; Obtiene el código 7 segmentos.
+003B                  00053 InicioTablaASCII
+003B   3446 3404 3440 00054         DT      46h, 04h, 40h, 80h, 00h, 3Fh, 06h, 5Bh, 4Fh, 66h, 6Dh   ; Signos y
+       3480 3400 343F 
+       3406 345B 344F 
+       3466 346D 
+0046   347D 3407 347F 00055         DT      7Dh, 07h, 7Fh, 67h, 41h, 88h, 00h, 48h, 00h, 00h, 00h   ; números.
+       3467 3441 3488 
+       3400 3448 3400 
+       3400 3400 
+0051   3477 347C 3439 00056         DT      77h, 7Ch, 39h, 5Eh, 79h, 71h, 6Fh, 76h, 19h, 1Eh, 7Ah, 38h, 37h ; Letras.
+       345E 3479 3471 
+       346F 3476 3419 
+       341E 347A 3438 
+       3437 
+005E   3454 343F 3473 00057         DT      54h, 3Fh, 73h, 67h, 50h, 6Dh, 78h, 1Ch, 3Eh, 1Dh, 70h, 6Eh, 49h
+       3467 3450 346D 
+       3478 341C 343E 
+       341D 3470 346E 
+       3449 
+006B                  00058 FinTablaASCII
+                      00059 ;
+                      00060 ; Esta es la tabla para la visualización en display de siete segmentos (Ver figura 11-3).
+                      00061 
+                      00062         IF (FinTablaASCII > 0xFF)
+                      00063                 ERROR   "¡CUIDADO!: La tabla ha superado el tamaño de la página de los"
+                      00064                 MESSG   "primeros 256 bytes de memoria ROM. NO funcionará correctamente."
+                      00065         ENDIF
+                      00066 
+                      00067 ;       ===================================================================
+                      00068 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00069 ;         E. Palacios, F. Remiro y L. López.
+                      00070 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00071 ;       ===================================================================
+                      00062         END
+MPASM 03.50 Released                           DISPLAY_06.ASM   10-15-1982  12:37:06         PAGE  4
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+ASCII_a_7Segmentos                00000026
+ActivarSalida                     0000000E
+C                                 00000000
+DC                                00000001
+Display7s_Dato                    0000000C
+EEADR                             00000009
+EECON1                            00000088
+EECON2                            00000089
+EEDATA                            00000008
+EEIE                              00000006
+EEIF                              00000004
+F                                 00000001
+FSR                               00000004
+FinTablaASCII                     0000006B
+GIE                               00000007
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+Inicio                            00000000
+InicioTablaASCII                  0000003B
+LeeCaracter                       00000010
+MensajeFin                        00000024
+MensajeInicio                     00000011
+MensajeMenor                      0000000D
+NOT_PD                            00000003
+NOT_RBPU                          00000007
+NOT_TO                            00000004
+Numero_a_7Segmentos               00000024
+OPTION_REG                        00000081
+PCL                               00000002
+PCLATH                            0000000A
+PORTA                             00000005
+PORTB                             00000006
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+Principal                         00000005
+RBIE                              00000003
+RBIF                              00000000
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+STATUS                            00000003
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+TMR0                              00000001
+TRISA                             00000085
+MPASM 03.50 Released                           DISPLAY_06.ASM   10-15-1982  12:37:06         PAGE  5
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+TRISB                             00000086
+W                                 00000000
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_CP_OFF                           00003FFF
+_CP_ON                            0000000F
+_HS_OSC                           00003FFE
+_LP_OSC                           00003FFC
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC                           00003FFF
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FFD
+__16F84A                          00000001
+
+
+MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
+
+0000 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0040 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXX----- ----------------
+2000 : -------X-------- ---------------- ---------------- ----------------
+
+All other memory blocks unused.
+
+Program Memory Words Used:   107
+Program Memory Words Free:   917
+
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :     0 reported,     0 suppressed
+
+

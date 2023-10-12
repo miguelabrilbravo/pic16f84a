@@ -1,0 +1,166 @@
+MPASM 03.50 Released                           DISPLAY_03.ASM   10-15-1982  12:33:39         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;************************************ Display_03.asm ************************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Por el display de 7 segmentos conectado al Puerto B se visualiza una de las 26 letras
+                      00010 ; del alfabeto internacional: de la "A" a la "Z". La letra a visualizar lo determina el
+                      00011 ; orden leído por el Puerto A. Así por ejemplo:
+                      00012 ; - Si por el Puerto A se lee "---0000"  (cero), la letra visualizada será la "A"
+                      00013 ;   que es la que está en el orden cero.
+                      00014 ; - Si por el Puerto A se lee "---1101" (veinticinco), la letra visualizada será la "Z"
+                      00015 ;   que es la que está en el orden veinticinco.
+                      00016 ;
+                      00017 ; Por ahora no se contempla la posibilidad que el número de entrada sea mayor de 25.
+                      00018 ;
+                      00019 ; ZONA DE DATOS **********************************************************************
+                      00020 
+2007   3FF1           00021         __CONFIG   _CP_OFF &  _WDT_OFF & _PWRTE_ON & _XT_OSC
+                      00022         LIST       P=16F84A
+                      00023         INCLUDE  <P16F84A.INC>
+                      00001         LIST
+                      00002 ; P16F84A.INC  Standard Header File, Version 2.00    Microchip Technology, Inc.
+                      00134         LIST
+                      00024 
+                      00025 ; ZONA DE CÓDIGOS ********************************************************************
+                      00026 
+0000                  00027         ORG     0                       ; El programa comienza en la dirección 0.
+0000                  00028 Inicio
+0000   1683           00029         bsf     STATUS,RP0              ; Acceso al Banco 1.
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0001   0186           00030         clrf    TRISB                   ; Las líneas del Puerto B se configuran como salida.
+0002   301F           00031         movlw   b'00011111'             ; Las 5 líneas del Puerto A se configuran como entrada.
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0003   0085           00032         movwf   TRISA
+0004   1283           00033         bcf     STATUS,RP0              ; Acceso al Banco 0.
+0005                  00034 Principal
+0005   0805           00035         movf    PORTA,W                 ; Lee la entrada
+0006   2009           00036         call    Letra_a_7Segmentos      ; Convierte a 7 Segmentos.
+0007   0086           00037         movwf   PORTB                   ; Resultado se visualiza por el puerto de salida.
+0008   2805           00038         goto    Principal
+                      00039 
+                      00040 ; Subrutina "Letra_a_7Segmentos" --------------------------------------------------------
+                      00041 ;
+0009                  00042 Letra_a_7Segmentos
+0009   0782           00043         addwf   PCL,F
+000A                  00044 InicioTabla
+000A   3477 347C 3439 00045         DT      77h, 7Ch, 39h, 5Eh, 79h, 71h, 6Fh, 76h, 19h, 1Eh, 7Ah, 38h, 37h
+       345E 3479 3471 
+       346F 3476 3419 
+       341E 347A 3438 
+MPASM 03.50 Released                           DISPLAY_03.ASM   10-15-1982  12:33:39         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+       3437 
+0017   3454 343F 3473 00046         DT      54h, 3Fh, 73h, 67h, 50h, 6Dh, 78h, 1Ch, 3Eh, 1Dh, 70h, 6Eh, 49h
+       3467 3450 346D 
+       3478 341C 343E 
+       341D 3470 346E 
+       3449 
+0024                  00047 FinTabla
+                      00048         END
+MPASM 03.50 Released                           DISPLAY_03.ASM   10-15-1982  12:33:39         PAGE  3
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+C                                 00000000
+DC                                00000001
+EEADR                             00000009
+EECON1                            00000088
+EECON2                            00000089
+EEDATA                            00000008
+EEIE                              00000006
+EEIF                              00000004
+F                                 00000001
+FSR                               00000004
+FinTabla                          00000024
+GIE                               00000007
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+Inicio                            00000000
+InicioTabla                       0000000A
+Letra_a_7Segmentos                00000009
+NOT_PD                            00000003
+NOT_RBPU                          00000007
+NOT_TO                            00000004
+OPTION_REG                        00000081
+PCL                               00000002
+PCLATH                            0000000A
+PORTA                             00000005
+PORTB                             00000006
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+Principal                         00000005
+RBIE                              00000003
+RBIF                              00000000
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+STATUS                            00000003
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+TMR0                              00000001
+TRISA                             00000085
+TRISB                             00000086
+W                                 00000000
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_CP_OFF                           00003FFF
+MPASM 03.50 Released                           DISPLAY_03.ASM   10-15-1982  12:33:39         PAGE  4
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+_CP_ON                            0000000F
+_HS_OSC                           00003FFE
+_LP_OSC                           00003FFC
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC                           00003FFF
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FFD
+__16F84A                          00000001
+
+
+MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
+
+0000 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXX------------ ----------------
+2000 : -------X-------- ---------------- ---------------- ----------------
+
+All other memory blocks unused.
+
+Program Memory Words Used:    36
+Program Memory Words Free:   988
+
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :     2 reported,     0 suppressed
+
+

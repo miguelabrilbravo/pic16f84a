@@ -1,0 +1,479 @@
+MPASM 03.50 Released                     INT_CUADRADAS_02.ASM   10-9-2003  11:29:00         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;******************************** Int_Cuadradas_02.asm **********************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; A la línea de salida se conecta un altavoz produciendo el sonido de una sirena que será fijado
+                      00010 ; por el diseñador. En esta solución la frecuencia es de 300 Hz, subiendo hasta 4 kHz y bajando
+                      00011 ; después más lentamente a su valor inicial y repitiendo el proceso.
+                      00012 
+                      00013 ; ZONA DE DATOS **********************************************************************
+                      00014 
+2007   3FF1           00015         __CONFIG   _CP_OFF &  _WDT_OFF & _PWRTE_ON & _XT_OSC
+                      00016         LIST       P=16F84A
+                      00017         INCLUDE  <P16F84A.INC>
+                      00001         LIST
+                      00002 ; P16F84A.INC  Standard Header File, Version 2.00    Microchip Technology, Inc.
+                      00134         LIST
+                      00018 
+                      00019         CBLOCK 0x0C
+  0000000C            00020         ApuntadorFrecuencia
+  0000000D            00021         SentidoFrecuencia               ; (SentidoFrecuencia)=0 (frecuencia ascendente).
+                      00022         ENDC                            ; (SentidoFrecuencia)=1 (frecuencia descendente).
+                      00023 
+  000000C8            00024 MaximoPeriodo   EQU     d'200'          ; Corresponden a una frecuencia entre 300 Hz y 
+  0000000F            00025 MinimoPeriodo   EQU     d'15'           ; 4 kHz tal como se demuestra posteriormente.
+                      00026 #DEFINE  Salida PORTB,3
+                      00027 
+                      00028 ; ZONA DE CÓDIGOS ********************************************************************
+                      00029 
+0000                  00030         ORG     0
+0000   2805           00031         goto    Inicio
+0004                  00032         ORG     4
+0004   2821           00033         goto    Timer0_Interrupcion
+0005                  00034 Inicio
+0005   1683           00035         bsf     STATUS,RP0
+0006   1186           00036         bcf     Salida
+0007   3002           00037         movlw   b'00000010'             ; Prescaler de 8 asignado al TMR0.
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0008   0081           00038         movwf   OPTION_REG
+0009   1283           00039         bcf     STATUS,RP0
+000A   018D           00040         clrf    SentidoFrecuencia       ; Inicializa el sentido de la variación de
+000B   30C8           00041         movlw   MaximoPeriodo           ; frecuencia ascendente en la sirena.
+000C   008C           00042         movwf   ApuntadorFrecuencia     ; Inicializa a la frecuencia mínima.
+000D   3C00           00043         sublw   .0                      ; Carga en el Timero 0 con signo negativo.
+000E   0081           00044         movwf   TMR0    
+000F   30A0           00045         movlw   b'10100000'
+0010   008B           00046         movwf   INTCON                  ; Activa interrupción del TMR0 (TOIE).
+0011                  00047 Principal
+0011   1C0D           00048         btfss   SentidoFrecuencia,0
+0012   281A           00049         goto    FrecuenciaAscendente
+MPASM 03.50 Released                     INT_CUADRADAS_02.ASM   10-9-2003  11:29:00         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0013                  00050 FrecuenciaDescendente
+0013   2050           00051         call    Retardo_20ms            ; Mantiene la frecuencia durante este tiempo.
+0014   0A8C           00052         incf    ApuntadorFrecuencia,F   ; Aumenta el período, disminuye la frecuencia.
+0015   30C8           00053         movlw   MaximoPeriodo           ; ¿Ha llegado a su máximo valor de periodo?.
+0016   020C           00054         subwf   ApuntadorFrecuencia,W   ; (W)=(ApuntadorFrecuencia)-MaximoPeriodo
+0017   1803           00055         btfsc   STATUS,C                ; ¿C=0?,¿(W) negativo?, ¿(ApuntadorFrecuencia)<Maximo.
+0018   018D           00056         clrf    SentidoFrecuencia       ; No. La siguiente pasada entra en "FrecuenciaAscendente".
+0019   2820           00057         goto    Fin
+001A                  00058 FrecuenciaAscendente
+001A   2052           00059         call    Retardo_10ms            ; Mantiene la frecuencia durante este tiempo.
+001B   038C           00060         decf    ApuntadorFrecuencia,F   ; Disminuye el período, aumenta la frecuencia.
+001C   300F           00061         movlw   MinimoPeriodo           ; ¿Ha llegado a su minimo valor de periodo?.
+001D   020C           00062         subwf   ApuntadorFrecuencia,W   ; (W)=(ApuntadorFrecuencia)-MinimoPeriodo
+001E   1C03           00063         btfss   STATUS,C                ; ¿C=1?,¿(W) positivo?, ¿(ApuntadorFrecuencia)>=Minimo.
+001F   0A8D           00064         incf    SentidoFrecuencia,F     ; No. La siguiente pasada entra en "FrecuenciaDescendente".
+0020   2811           00065 Fin     goto    Principal
+                      00066 
+                      00067 ; Subrutina "Timer0_Interrupcion" -------------------------------------------------------
+                      00068 ;
+                      00069 ; Con un prescaler de 8 el período variará según el valor de ApuntadorFrecuencia entre:
+                      00070 ; - Para (ApuntadorFrecuencia)=15, frecuencia = 4 kHz.
+                      00071 ;   (efectivamente 15 x 8 = 120 µs de semiperiodo que son 4 kHz aproximadamente).
+                      00072 ; - Para (ApuntadorFrecuencia)=200, frecuencia = 300 Hz.
+                      00073 ;   (efectivamente 200 x 8 = 1600 µs de semiperiodo que son 300 Hz aproximadamente).
+                      00074 
+                      00075         CBLOCK  
+  0000000E            00076         Guarda_W
+  0000000F            00077         Guarda_STATUS
+                      00078         ENDC
+                      00079 
+0021                  00080 Timer0_Interrupcion
+0021   008E           00081         movwf   Guarda_W                ; Guarda el valor de W y STATUS.
+0022   0E03           00082         swapf   STATUS,W
+0023   008F           00083         movwf   Guarda_STATUS
+0024   1283           00084         bcf     STATUS,RP0
+0025   080C           00085         movf    ApuntadorFrecuencia,W
+0026   3C00           00086         sublw   .0                      ; Carga en el Timer 0 con signo negativo.
+0027   0081           00087         movwf   TMR0
+0028   1986           00088         btfsc   Salida
+0029   282C           00089         goto    EstabaAlto
+002A                  00090 EstabaBajo
+002A   1586           00091         bsf     Salida
+002B   282D           00092         goto    Fin_Timer0_Interrupcion
+002C                  00093 EstabaAlto
+002C   1186           00094         bcf     Salida
+002D                  00095 Fin_Timer0_Interrupcion
+002D   0E0F           00096         swapf   Guarda_STATUS,W         ; Restaura el valor de W y STATUS.
+002E   0083           00097         movwf   STATUS
+002F   0E8E           00098         swapf   Guarda_W,F
+0030   0E0E           00099         swapf   Guarda_W,W
+0031   110B           00100         bcf     INTCON,T0IF
+0032   0009           00101         retfie
+                      00102 ;
+MPASM 03.50 Released                     INT_CUADRADAS_02.ASM   10-9-2003  11:29:00         PAGE  3
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00103         INCLUDE  <RETARDOS.INC>
+                      00001 ;**************************** Librería "RETARDOS.INC" *********************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Librería con múltiples subrutinas de retardos, desde 4 microsegundos hasta 20 segundos. 
+                      00010 ; Además se pueden implementar otras subrutinas muy fácilmente.
+                      00011 ;
+                      00012 ; Se han calculado para un sistema microcontrolador con un PIC trabajando con un cristal
+                      00013 ; de cuarzo a 4 MHz. Como cada ciclo máquina son 4 ciclos de reloj, resulta que cada
+                      00014 ; ciclo máquina tarda 4 x 1/4MHz = 1 µs.
+                      00015 ;
+                      00016 ; En los comentarios, "cm" significa "ciclos máquina".
+                      00017 ;
+                      00018 ; ZONA DE DATOS *********************************************************************
+                      00019 
+                      00020         CBLOCK
+  00000010            00021         R_ContA                         ; Contadores para los retardos.
+  00000011            00022         R_ContB
+  00000012            00023         R_ContC
+                      00024         ENDC
+                      00025 ;
+                      00026 ; RETARDOS de 4 hasta 10 microsegundos ---------------------------------------------------
+                      00027 ;
+                      00028 ; A continuación retardos pequeños teniendo en cuenta que para una frecuencia de 4 MHZ,
+                      00029 ; la llamada a subrutina "call" tarda 2 ciclos máquina, el retorno de subrutina
+                      00030 ; "return" toma otros 2 ciclos máquina y cada instrucción "nop" tarda 1 ciclo máquina.
+                      00031 ;
+0033                  00032 Retardo_10micros                                ; La llamada "call" aporta 2 ciclos máquina.
+0033   0000           00033         nop                             ; Aporta 1 ciclo máquina.
+0034   0000           00034         nop                             ; Aporta 1 ciclo máquina.
+0035   0000           00035         nop                             ; Aporta 1 ciclo máquina.
+0036   0000           00036         nop                             ; Aporta 1 ciclo máquina.
+0037   0000           00037         nop                             ; Aporta 1 ciclo máquina.
+0038                  00038 Retardo_5micros                         ; La llamada "call" aporta 2 ciclos máquina.
+0038   0000           00039         nop                             ; Aporta 1 ciclo máquina.
+0039                  00040 Retardo_4micros                         ; La llamada "call" aporta 2 ciclos máquina.
+0039   0008           00041         return                          ; El salto del retorno aporta 2 ciclos máquina.
+                      00042 ;
+                      00043 ; RETARDOS de 20 hasta 500 microsegundos ------------------------------------------------
+                      00044 ;
+003A                  00045 Retardo_500micros                               ; La llamada "call" aporta 2 ciclos máquina.
+003A   0000           00046         nop                             ; Aporta 1 ciclo máquina.
+003B   30A4           00047         movlw   d'164'                  ; Aporta 1 ciclo máquina. Este es el valor de "K".
+003C   2846           00048         goto    RetardoMicros           ; Aporta 2 ciclos máquina.
+003D                  00049 Retardo_200micros                               ; La llamada "call" aporta 2 ciclos máquina.
+003D   0000           00050         nop                             ; Aporta 1 ciclo máquina.
+003E   3040           00051         movlw   d'64'                   ; Aporta 1 ciclo máquina. Este es el valor de "K".
+003F   2846           00052         goto    RetardoMicros           ; Aporta 2 ciclos máquina.
+MPASM 03.50 Released                     INT_CUADRADAS_02.ASM   10-9-2003  11:29:00         PAGE  4
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0040                  00053 Retardo_100micros                               ; La llamada "call" aporta 2 ciclos máquina.
+0040   301F           00054         movlw   d'31'                   ; Aporta 1 ciclo máquina. Este es el valor de "K".
+0041   2846           00055         goto    RetardoMicros           ; Aporta 2 ciclos máquina.
+0042                  00056 Retardo_50micros                                ; La llamada "call" aporta 2 ciclos máquina.
+0042   0000           00057         nop                             ; Aporta 1 ciclo máquina.
+0043   300E           00058         movlw   d'14'                   ; Aporta 1 ciclo máquina. Este es el valor de "K".
+0044   2846           00059         goto    RetardoMicros           ; Aporta 2 ciclos máquina.
+0045                  00060 Retardo_20micros                                ; La llamada "call" aporta 2 ciclos máquina.
+0045   3005           00061         movlw   d'5'                    ; Aporta 1 ciclo máquina. Este es el valor de "K".
+                      00062 ;
+                      00063 ; El próximo bloque "RetardoMicros" tarda:
+                      00064 ; 1 + (K-1) + 2 + (K-1)x2 + 2 = (2 + 3K) ciclos máquina.
+                      00065 ;
+0046                  00066 RetardoMicros
+0046   0090           00067         movwf   R_ContA                 ; Aporta 1 ciclo máquina.
+0047                  00068 Rmicros_Bucle
+0047   0B90           00069         decfsz  R_ContA,F               ; (K-1)x1 cm (cuando no salta) + 2 cm (al saltar).
+0048   2847           00070         goto    Rmicros_Bucle           ; Aporta (K-1)x2 ciclos máquina.
+0049   0008           00071         return                          ; El salto del retorno aporta 2 ciclos máquina.
+                      00072 ;
+                      00073 ;En total estas subrutinas tardan:
+                      00074 ; - Retardo_500micros:  2 + 1 + 1 + 2 + (2 + 3K) = 500 cm = 500 µs. (para K=164 y 4 MHz).
+                      00075 ; - Retardo_200micros:  2 + 1 + 1 + 2 + (2 + 3K) = 200 cm = 200 µs. (para K= 64 y 4 MHz).
+                      00076 ; - Retardo_100micros:  2     + 1 + 2 + (2 + 3K) = 100 cm = 100 µs. (para K= 31 y 4 MHz).
+                      00077 ; - Retardo_50micros :  2 + 1 + 1 + 2 + (2 + 3K) =  50 cm =  50 µs. (para K= 14 y 4 MHz).
+                      00078 ; - Retardo_20micros :  2     + 1     + (2 + 3K) =  20 cm =  20 µs. (para K=  5 y 4 MHz).
+                      00079 ;
+                      00080 ; RETARDOS de 1 ms hasta 200 ms. --------------------------------------------------------
+                      00081 ;
+004A                  00082 Retardo_200ms                           ; La llamada "call" aporta 2 ciclos máquina.
+004A   30C8           00083         movlw   d'200'                  ; Aporta 1 ciclo máquina. Este es el valor de "M".
+004B   2859           00084         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+004C                  00085 Retardo_100ms                           ; La llamada "call" aporta 2 ciclos máquina.
+004C   3064           00086         movlw   d'100'                  ; Aporta 1 ciclo máquina. Este es el valor de "M".
+004D   2859           00087         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+004E                  00088 Retardo_50ms                            ; La llamada "call" aporta 2 ciclos máquina.
+004E   3032           00089         movlw   d'50'                   ; Aporta 1 ciclo máquina. Este es el valor de "M".
+004F   2859           00090         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+0050                  00091 Retardo_20ms                            ; La llamada "call" aporta 2 ciclos máquina.
+0050   3014           00092         movlw   d'20'                   ; Aporta 1 ciclo máquina. Este es el valor de "M".
+0051   2859           00093         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+0052                  00094 Retardo_10ms                            ; La llamada "call" aporta 2 ciclos máquina.
+0052   300A           00095         movlw   d'10'                   ; Aporta 1 ciclo máquina. Este es el valor de "M".
+0053   2859           00096         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+0054                  00097 Retardo_5ms                             ; La llamada "call" aporta 2 ciclos máquina.
+0054   3005           00098         movlw   d'5'                    ; Aporta 1 ciclo máquina. Este es el valor de "M".
+0055   2859           00099         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+0056                  00100 Retardo_2ms                             ; La llamada "call" aporta 2 ciclos máquina.
+0056   3002           00101         movlw   d'2'                    ; Aporta 1 ciclo máquina. Este es el valor de "M".
+0057   2859           00102         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+0058                  00103 Retardo_1ms                             ; La llamada "call" aporta 2 ciclos máquina.
+0058   3001           00104         movlw   d'1'                    ; Aporta 1 ciclo máquina. Este es el valor de "M".
+                      00105 ;
+MPASM 03.50 Released                     INT_CUADRADAS_02.ASM   10-9-2003  11:29:00         PAGE  5
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00106 ; El próximo bloque "Retardos_ms" tarda:
+                      00107 ; 1 + M + M + KxM + (K-1)xM + Mx2 + (K-1)Mx2 + (M-1) + 2 + (M-1)x2 + 2 =
+                      00108 ; = (2 + 4M + 4KM) ciclos máquina. Para K=249 y M=1 supone 1002 ciclos máquina
+                      00109 ; que a 4 MHz son 1002 µs = 1 ms.
+                      00110 ;
+0059                  00111 Retardos_ms
+0059   0091           00112         movwf   R_ContB                 ; Aporta 1 ciclo máquina.
+005A                  00113 R1ms_BucleExterno
+005A   30F9           00114         movlw   d'249'                  ; Aporta Mx1 ciclos máquina. Este es el valor de "K".
+005B   0090           00115         movwf   R_ContA                 ; Aporta Mx1 ciclos máquina.
+005C                  00116 R1ms_BucleInterno
+005C   0000           00117         nop                             ; Aporta KxMx1 ciclos máquina.
+005D   0B90           00118         decfsz  R_ContA,F               ; (K-1)xMx1 cm (cuando no salta) + Mx2 cm (al saltar).
+005E   285C           00119         goto    R1ms_BucleInterno               ; Aporta (K-1)xMx2 ciclos máquina.
+005F   0B91           00120         decfsz  R_ContB,F               ; (M-1)x1 cm (cuando no salta) + 2 cm (al saltar).
+0060   285A           00121         goto    R1ms_BucleExterno       ; Aporta (M-1)x2 ciclos máquina.
+0061   0008           00122         return                          ; El salto del retorno aporta 2 ciclos máquina.
+                      00123 ;
+                      00124 ;En total estas subrutinas tardan:
+                      00125 ; - Retardo_200ms:      2 + 1 + 2 + (2 + 4M + 4KM) = 200007 cm = 200 ms. (M=200 y K=249).
+                      00126 ; - Retardo_100ms:      2 + 1 + 2 + (2 + 4M + 4KM) = 100007 cm = 100 ms. (M=100 y K=249).
+                      00127 ; - Retardo_50ms :      2 + 1 + 2 + (2 + 4M + 4KM) =  50007 cm =  50 ms. (M= 50 y K=249).
+                      00128 ; - Retardo_20ms :      2 + 1 + 2 + (2 + 4M + 4KM) =  20007 cm =  20 ms. (M= 20 y K=249).
+                      00129 ; - Retardo_10ms :      2 + 1 + 2 + (2 + 4M + 4KM) =  10007 cm =  10 ms. (M= 10 y K=249).
+                      00130 ; - Retardo_5ms  :      2 + 1 + 2 + (2 + 4M + 4KM) =   5007 cm =   5 ms. (M=  5 y K=249).
+                      00131 ; - Retardo_2ms  :      2 + 1 + 2 + (2 + 4M + 4KM) =   2007 cm =   2 ms. (M=  2 y K=249).
+                      00132 ; - Retardo_1ms  :      2 + 1     + (2 + 4M + 4KM) =   1005 cm =   1 ms. (M=  1 y K=249).
+                      00133 ;
+                      00134 ; RETARDOS de 0.5 hasta 20 segundos ---------------------------------------------------
+                      00135 ;
+0062                  00136 Retardo_20s                             ; La llamada "call" aporta 2 ciclos máquina.
+0062   30C8           00137         movlw   d'200'                  ; Aporta 1 ciclo máquina. Este es el valor de "N".
+0063   286D           00138         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+0064                  00139 Retardo_10s                             ; La llamada "call" aporta 2 ciclos máquina.
+0064   3064           00140         movlw   d'100'                  ; Aporta 1 ciclo máquina. Este es el valor de "N".
+0065   286D           00141         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+0066                  00142 Retardo_5s                              ; La llamada "call" aporta 2 ciclos máquina.
+0066   3032           00143         movlw   d'50'                   ; Aporta 1 ciclo máquina. Este es el valor de "N".
+0067   286D           00144         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+0068                  00145 Retardo_2s                              ; La llamada "call" aporta 2 ciclos máquina.
+0068   3014           00146         movlw   d'20'                   ; Aporta 1 ciclo máquina. Este es el valor de "N".
+0069   286D           00147         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+006A                  00148 Retardo_1s                              ; La llamada "call" aporta 2 ciclos máquina.
+006A   300A           00149         movlw   d'10'                   ; Aporta 1 ciclo máquina. Este es el valor de "N".
+006B   286D           00150         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+006C                  00151 Retardo_500ms                           ; La llamada "call" aporta 2 ciclos máquina.
+006C   3005           00152         movlw   d'5'                    ; Aporta 1 ciclo máquina. Este es el valor de "N".
+                      00153 ;
+                      00154 ; El próximo bloque "Retardo_1Decima" tarda:
+                      00155 ; 1 + N + N + MxN + MxN + KxMxN + (K-1)xMxN + MxNx2 + (K-1)xMxNx2 +
+                      00156 ;   + (M-1)xN + Nx2 + (M-1)xNx2 + (N-1) + 2 + (N-1)x2 + 2 =
+                      00157 ; = (2 + 4M + 4MN + 4KM) ciclos máquina. Para K=249, M=100 y N=1 supone 100011
+                      00158 ; ciclos máquina que a 4 MHz son 100011 µs = 100 ms = 0,1 s = 1 décima de segundo.
+MPASM 03.50 Released                     INT_CUADRADAS_02.ASM   10-9-2003  11:29:00         PAGE  6
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00159 ;
+006D                  00160 Retardo_1Decima
+006D   0092           00161         movwf   R_ContC                 ; Aporta 1 ciclo máquina.
+006E                  00162 R1Decima_BucleExterno2
+006E   3064           00163         movlw   d'100'                  ; Aporta Nx1 ciclos máquina. Este es el valor de "M".
+006F   0091           00164         movwf   R_ContB                 ; Aporta Nx1 ciclos máquina.
+0070                  00165 R1Decima_BucleExterno
+0070   30F9           00166         movlw   d'249'                  ; Aporta MxNx1 ciclos máquina. Este es el valor de "K".
+0071   0090           00167         movwf   R_ContA                 ; Aporta MxNx1 ciclos máquina.
+0072                  00168 R1Decima_BucleInterno          
+0072   0000           00169         nop                             ; Aporta KxMxNx1 ciclos máquina.
+0073   0B90           00170         decfsz  R_ContA,F               ; (K-1)xMxNx1 cm (si no salta) + MxNx2 cm (al saltar).
+0074   2872           00171         goto    R1Decima_BucleInterno   ; Aporta (K-1)xMxNx2 ciclos máquina.
+0075   0B91           00172         decfsz  R_ContB,F               ; (M-1)xNx1 cm (cuando no salta) + Nx2 cm (al saltar).
+0076   2870           00173         goto    R1Decima_BucleExterno   ; Aporta (M-1)xNx2 ciclos máquina.
+0077   0B92           00174         decfsz  R_ContC,F               ; (N-1)x1 cm (cuando no salta) + 2 cm (al saltar).
+0078   286E           00175         goto    R1Decima_BucleExterno2  ; Aporta (N-1)x2 ciclos máquina.
+0079   0008           00176         return                          ; El salto del retorno aporta 2 ciclos máquina.
+                      00177 ;
+                      00178 ;En total estas subrutinas tardan:
+                      00179 ; - Retardo_20s:        2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) = 20000807 cm = 20 s.
+                      00180 ;                       (N=200, M=100 y K=249).
+                      00181 ; - Retardo_10s:        2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) = 10000407 cm = 10 s.
+                      00182 ;                       (N=100, M=100 y K=249).
+                      00183 ; - Retardo_5s:         2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) =  5000207 cm =  5 s.
+                      00184 ;                       (N= 50, M=100 y K=249).
+                      00185 ; - Retardo_2s:         2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) =  2000087 cm =  2 s.
+                      00186 ;                       (N= 20, M=100 y K=249).
+                      00187 ; - Retardo_1s:         2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) =  1000047 cm =  1 s.
+                      00188 ;                       (N= 10, M=100 y K=249).
+                      00189 ; - Retardo_500ms:      2 + 1     + (2 + 4N + 4MN + 4KMN) =   500025 cm = 0,5 s.
+                      00190 ;                       (N=  5, M=100 y K=249).
+                      00104         END
+MPASM 03.50 Released                     INT_CUADRADAS_02.ASM   10-9-2003  11:29:00         PAGE  7
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+ApuntadorFrecuencia               0000000C
+C                                 00000000
+DC                                00000001
+EEADR                             00000009
+EECON1                            00000088
+EECON2                            00000089
+EEDATA                            00000008
+EEIE                              00000006
+EEIF                              00000004
+EstabaAlto                        0000002C
+EstabaBajo                        0000002A
+F                                 00000001
+FSR                               00000004
+Fin                               00000020
+Fin_Timer0_Interrupcion           0000002D
+FrecuenciaAscendente              0000001A
+FrecuenciaDescendente             00000013
+GIE                               00000007
+Guarda_STATUS                     0000000F
+Guarda_W                          0000000E
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+Inicio                            00000005
+MaximoPeriodo                     000000C8
+MinimoPeriodo                     0000000F
+NOT_PD                            00000003
+NOT_RBPU                          00000007
+NOT_TO                            00000004
+OPTION_REG                        00000081
+PCL                               00000002
+PCLATH                            0000000A
+PORTA                             00000005
+PORTB                             00000006
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+Principal                         00000011
+R1Decima_BucleExterno             00000070
+R1Decima_BucleExterno2            0000006E
+R1Decima_BucleInterno             00000072
+R1ms_BucleExterno                 0000005A
+R1ms_BucleInterno                 0000005C
+RBIE                              00000003
+RBIF                              00000000
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+R_ContA                           00000010
+MPASM 03.50 Released                     INT_CUADRADAS_02.ASM   10-9-2003  11:29:00         PAGE  8
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+R_ContB                           00000011
+R_ContC                           00000012
+RetardoMicros                     00000046
+Retardo_100micros                 00000040
+Retardo_100ms                     0000004C
+Retardo_10micros                  00000033
+Retardo_10ms                      00000052
+Retardo_10s                       00000064
+Retardo_1Decima                   0000006D
+Retardo_1ms                       00000058
+Retardo_1s                        0000006A
+Retardo_200micros                 0000003D
+Retardo_200ms                     0000004A
+Retardo_20micros                  00000045
+Retardo_20ms                      00000050
+Retardo_20s                       00000062
+Retardo_2ms                       00000056
+Retardo_2s                        00000068
+Retardo_4micros                   00000039
+Retardo_500micros                 0000003A
+Retardo_500ms                     0000006C
+Retardo_50micros                  00000042
+Retardo_50ms                      0000004E
+Retardo_5micros                   00000038
+Retardo_5ms                       00000054
+Retardo_5s                        00000066
+Retardos_ms                       00000059
+Rmicros_Bucle                     00000047
+STATUS                            00000003
+Salida                            PORTB,3
+SentidoFrecuencia                 0000000D
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+TMR0                              00000001
+TRISA                             00000085
+TRISB                             00000086
+Timer0_Interrupcion               00000021
+W                                 00000000
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_CP_OFF                           00003FFF
+_CP_ON                            0000000F
+_HS_OSC                           00003FFE
+_LP_OSC                           00003FFC
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC                           00003FFF
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+MPASM 03.50 Released                     INT_CUADRADAS_02.ASM   10-9-2003  11:29:00         PAGE  9
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+_XT_OSC                           00003FFD
+__16F84A                          00000001
+
+
+MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
+
+0000 : X---XXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0040 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXX------
+2000 : -------X-------- ---------------- ---------------- ----------------
+
+All other memory blocks unused.
+
+Program Memory Words Used:   119
+Program Memory Words Free:   905
+
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :     1 reported,     0 suppressed
+
+

@@ -1,0 +1,168 @@
+MPASM 03.50 Released                  ROBOT_RASTREADOR_01.ASM   10-31-2003  21:07:35         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;********************************* Robot_Rastreador_01.asm *******************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Programa de control para el microbot TRASTO, el cual se desplaza siguiendo una línea negra
+                      00010 ; marcada sobre fondo blanco a modo de pista.
+                      00011 ;
+                      00012 ; Los sensores ópticos de reflexión CNY70 están situados en la parte delantera inferior del
+                      00013 ; microbot: El sensor de la derecha está conectado a RA0 y el sensor de la izquierda a RA1. 
+                      00014 ;
+                      00015 ; El programa adopta la estrategia de seguir la línea por el borde derecho:
+                      00016 ;   - Si detecta que está en el borde derecho: sensor izquierdo sobre negro y derecho sobre
+                      00017 ;     blanco sigue en hacia delante.
+                      00018 ;   - Si el sensor de la derecha detecta línea negra gira hacia la derecha buscando el borde,
+                      00019 ;     independientemente de como esté el sensor de la izquierda.
+                      00020 ;   - Si el microbot tiene los dos sensores fuera de la línea, se le hace girar a la izquierda
+                      00021 ;     hasta que vuelva a encontrarla.
+                      00022 ;
+                      00023 ; La señal de los sensores CNY70 se aplican a las entradas del microcontrolador a través de un
+                      00024 ; inversor 40106 de manera tal, que para color:
+                      00025 ;  - Color Blanco --> transistor saturado --> entrada al inversor "0" --> RAx = "1".
+                      00026 ;    (No está encima de la línea negra, se ha salido de la pista)       
+                      00027 ;  - Color Negro   --> transistor en corte --> entrada al inversor "1" --> RAx = "0".
+                      00028 ;    (Está encima de la línea negra, está dentro de la pista)   
+                      00029 ;
+                      00030 ; ZONA DE DATOS **********************************************************************
+                      00031 
+2007   3FF1           00032         __CONFIG   _CP_OFF &  _WDT_OFF & _PWRTE_ON & _XT_OSC
+                      00033         LIST       P=16F84A
+                      00034         INCLUDE  <P16F84A.INC>
+                      00001         LIST
+                      00002 ; P16F84A.INC  Standard Header File, Version 2.00    Microchip Technology, Inc.
+                      00134         LIST
+                      00035 
+                      00036 #DEFINE SensorDerecha   PORTA,0         ; Sensor óptico Derecho.
+                      00037 #DEFINE SensorIzquierda PORTA,1         ; Sensor óptico Izquierdo.
+                      00038 
+                      00039 ; ZONA DE CÓDIGOS ********************************************************************
+                      00040 
+0000                  00041         ORG     0
+0000                  00042 Inicio
+0000   1683           00043         bsf     STATUS,RP0              ; Selecciona Banco 1 de registros.
+0001   1405           00044         bsf     SensorDerecha           ; Estas líneas se configuran como entrada.
+0002   1485           00045         bsf     SensorIzquierda
+0003   0186           00046         clrf    PORTB                   ; Las líneas del Puerto B se configuran como salidas.
+0004   1283           00047         bcf     STATUS,RP0              ; Selecciona Banco 0 de registros.
+0005                  00048 Principal       
+0005   300E           00049         movlw   b'00001110'             ; Para girar a la derecha.
+0006   1C05           00050         btfss   SensorDerecha           ; ¿Ha salido por la derecha?, ¿detecta blanco?
+MPASM 03.50 Released                  ROBOT_RASTREADOR_01.ASM   10-31-2003  21:07:35         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0007   280B           00051         goto    ActivaSalida            ; No, el detector derecho está encima de la línea
+                      00052                                         ; negra, gira a la derecha.
+0008   3007           00053         movlw   b'00000111'             ; Para girar a la izquierda.
+0009   1C85           00054         btfss   SensorIzquierda         ; ¿Ha salido también por la izquierda?
+000A   300F           00055         movlw   b'00001111'             ; No, está en el borde derecho. Sigue recto.
+000B                  00056 ActivaSalida
+000B   0086           00057         movwf   PORTB
+000C   2805           00058         goto    Principal
+                      00059 
+                      00060         END
+MPASM 03.50 Released                  ROBOT_RASTREADOR_01.ASM   10-31-2003  21:07:35         PAGE  3
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+ActivaSalida                      0000000B
+C                                 00000000
+DC                                00000001
+EEADR                             00000009
+EECON1                            00000088
+EECON2                            00000089
+EEDATA                            00000008
+EEIE                              00000006
+EEIF                              00000004
+F                                 00000001
+FSR                               00000004
+GIE                               00000007
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+Inicio                            00000000
+NOT_PD                            00000003
+NOT_RBPU                          00000007
+NOT_TO                            00000004
+OPTION_REG                        00000081
+PCL                               00000002
+PCLATH                            0000000A
+PORTA                             00000005
+PORTB                             00000006
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+Principal                         00000005
+RBIE                              00000003
+RBIF                              00000000
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+STATUS                            00000003
+SensorDerecha                     PORTA,0
+SensorIzquierda                   PORTA,1
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+TMR0                              00000001
+TRISA                             00000085
+TRISB                             00000086
+W                                 00000000
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_CP_OFF                           00003FFF
+MPASM 03.50 Released                  ROBOT_RASTREADOR_01.ASM   10-31-2003  21:07:35         PAGE  4
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+_CP_ON                            0000000F
+_HS_OSC                           00003FFE
+_LP_OSC                           00003FFC
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC                           00003FFF
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FFD
+__16F84A                          00000001
+
+
+MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
+
+0000 : XXXXXXXXXXXXX--- ---------------- ---------------- ----------------
+2000 : -------X-------- ---------------- ---------------- ----------------
+
+All other memory blocks unused.
+
+Program Memory Words Used:    13
+Program Memory Words Free:  1011
+
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :     0 reported,     0 suppressed
+
+

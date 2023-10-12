@@ -1,0 +1,1003 @@
+MPASM 03.50 Released                         INT_RELOJ_02.ASM   10-9-2003  11:44:50         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;*********************************** Int_Reloj_02.asm ***********************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Este es el programa para un reloj digital en cuanto al ajuste manual de las horas.
+                      00010 ; Es decir, solo se van a ajustar las horas, el resto del reloj digital no va funciona.
+                      00011 ;
+                      00012 ; Esto se va a realizar mediante el pulsador "INCREMENTAR" que se conecta al pin RB6 a
+                      00013 ; través de una resistencia de 330 ohmios.
+                      00014 ;
+                      00015 ; El reloj se visualiza en un formato: " 8:00:00", donde los minutos y segundos siempre
+                      00016 ; valdrán cero y el digito de las horas se mantendrá intermitente. Cada vez que se pulse
+                      00017 ; INCREMENTAR, el digito de la horas se incrementará.
+                      00018 ;
+                      00019 ; Las temporizaciones necesarias del reloj, se logran mediante el Timer 0, que produce una
+                      00020 ; interrupción cada 50 ms. Con esto se logra el tiempo base necesario para la intermitencia.
+                      00021 ;
+                      00022 ; La intermitencia utiliza el flag F_Intermitencia. Cuando está en "1", la visualización es
+                      00023 ; normal. Cuando es (F_Intermitencia)=0, apaga el digito correspondiente. Conmuta cada 500 ms.
+                      00024 ;
+                      00025 ; ZONA DE DATOS **********************************************************************
+                      00026 
+2007   3FF1           00027         __CONFIG   _CP_OFF &  _WDT_OFF & _PWRTE_ON & _XT_OSC
+                      00028         LIST       P=16F84A
+                      00029         INCLUDE  <P16F84A.INC>
+                      00001         LIST
+                      00002 ; P16F84A.INC  Standard Header File, Version 2.00    Microchip Technology, Inc.
+                      00134         LIST
+                      00030 
+                      00031         CBLOCK  0x0C
+  0000000C            00032         Hora                            ; Guarda las horas.
+  0000000D            00033         Minuto                          ; Guarda los minutos.
+  0000000E            00034         Segundo                         ; Guarda los segundos.
+  0000000F            00035         Registro50ms                    ; Se incrementa cada 50ms
+  00000010            00036         Intermitencia                   ; Para lograr la intermitencia.
+                      00037         ENDC
+                      00038 ;
+                      00039 #DEFINE  IncrementarPulsador  PORTB,6
+                      00040 #DEFINE  F_Intermitencia        Intermitencia,0 ; Si es 0 apaga en intermitencia.
+  FFFFFF3D            00041 TMR0_Carga50ms  EQU     -d'195'         ; Para conseguir la interrupción del
+                      00042                                         ; Timer 0 cada 50 ms.
+                      00043 ; ZONA DE CÓDIGOS ********************************************************************
+                      00044 
+0000                  00045         ORG     0
+0000   2805           00046         goto    Inicio
+0004                  00047         ORG     4
+0004   2814           00048         goto    ServicioInterrupcion
+                      00049 
+0005   209A           00050 Inicio  call    LCD_Inicializa
+MPASM 03.50 Released                         INT_RELOJ_02.ASM   10-9-2003  11:44:50         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0006   1683           00051         bsf     STATUS,RP0              ; Acceso al Banco 1.
+0007   3007           00052         movlw   b'00000111'             ; Prescaler de 256 para el TMR0 y habilita
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0008   0081           00053         movwf   OPTION_REG              ; resistencias de Pull-Up del Puerto B.
+0009   1706           00054         bsf     IncrementarPulsador     ; Configurado como entrada.
+000A   1283           00055         bcf     STATUS,RP0              ; Acceso al Banco 0.
+000B   018C           00056         clrf    Hora                    ; Inicializa todos los datos del reloj. 
+000C   018D           00057         clrf    Minuto
+000D   018E           00058         clrf    Segundo 
+000E   018F           00059         clrf    Registro50ms    
+000F   303D           00060         movlw   TMR0_Carga50ms          ; Carga el TMR0.
+0010   0081           00061         movwf   TMR0            
+0011   30A8           00062         movlw   b'10101000'             ; Activa interrupción TMR0 (TOIE), por cambio
+0012   008B           00063         movwf   INTCON                  ; líneas del Puerto B (RBIE) y la general (GIE).
+                      00064         
+                      00065 ; La sección "Principal" es el programa de mantenimiento. Solo espera las interrupciones.
+                      00066 ; No se puede poner en modo de bajo consumo porque la instrucción "sleep" detiene el Timer 0.
+                      00067 
+0013                  00068 Principal
+0013   2813           00069         goto    Principal
+                      00070 
+                      00071 ; Subrutina "ServicioInterrupcion" ------------------------------------------------------
+                      00072 ;
+                      00073 ; Detecta qué ha producido la interrupción y ejecuta la subrutina de atención correspondiente.
+                      00074 
+0014                  00075 ServicioInterrupcion
+0014   190B           00076         btfsc   INTCON,T0IF             ; Si es una interrupción procedente del
+0015   201D           00077         call    Reloj                   ; desbordamiento del Timer 0, actualiza el reloj.
+0016   1C0B           00078         btfss   INTCON,RBIF             ; Si es una interrupción RBI, lee los pulsadores.
+0017   281A           00079         goto    FinInterrupcion
+0018   1F06           00080         btfss   IncrementarPulsador     ; ¿Pulsado "INCREMENTAR"?.
+0019   203D           00081         call    Incrementar             ; Sí, pasa a incrementar el registro de tiempo
+001A                  00082 FinInterrupcion                         ; correspondiente.
+001A   100B           00083         bcf     INTCON,RBIF
+001B   110B           00084         bcf     INTCON,T0IF
+001C   0009           00085         retfie
+                      00086 
+                      00087 ; Subrutina "Reloj" ---------------------------------------------------------------------
+                      00088 ;
+                      00089 ; Esta subrutina actualiza los contadores MedioSegundo y Registro50ms. Se ejecuta debido a la
+                      00090 ; petición de interrupción del Timer 0, cada 50 ms exactos, tal como se comprueba
+                      00091 ; experimentalmente con la ventana "Stopwatch" del simulador del MPLAB.
+                      00092 
+001D   2062           00093 Reloj   call    Retardo_50micros        ; Retardo de 71 microsegundos para
+001E   2065           00094         call    Retardo_20micros        ; ajustar a 50 milisegundos exactos.
+001F   0000           00095         nop
+0020   303D           00096         movlw   TMR0_Carga50ms          ; Carga el Timer 0.
+0021   0081           00097         movwf   TMR0
+0022   2047           00098         call    IncrementaRegistro50ms
+0023   1C03           00099         btfss   STATUS,C                ; ¿Ha contado 10 veces 50 ms = 1/2 segundo?.
+0024   2828           00100         goto    FinReloj                ; No. Pues sale sin visualizar el reloj.
+                      00101 
+                      00102 ; Ahora conmuta el flag de intermitencia.
+MPASM 03.50 Released                         INT_RELOJ_02.ASM   10-9-2003  11:44:50         PAGE  3
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00103 ;
+0025   30FF           00104         movlw   b'11111111'             ; Conmuta el flag F_Intermitencia.
+0026   0690           00105         xorwf   Intermitencia,F
+0027   2029           00106         call    VisualizaReloj          ; Visualiza el reloj.
+0028                  00107 FinReloj
+0028   0008           00108         return
+                      00109 
+                      00110 ; Subrutina "VisualizaReloj" ------------------------------------------------------------
+                      00111 ;
+                      00112 ; Visualiza el reloj en la segunda linea en formato: " 8:00:00" (Segunda Línea).
+                      00113 ; Cuando ajusta una variable, esta debe aparecer en intermitencia. Utiliza el flag
+                      00114 ; F_Intermitencia que conmuta cada 500 ms en la subrutina "Reloj".
+                      00115 ;
+0029                  00116 VisualizaReloj
+0029   3004           00117         movlw   .4                      ; Para centrar visualización
+002A   20D1           00118         call    LCD_PosicionLinea2      ; en la segunda línea.
+002B   1C10           00119         btfss   F_Intermitencia         ; Intermitencia si procede.
+002C   2831           00120         goto    ApagaHoras              ; Apaga las horas en la intermitencia.
+002D                  00121 EnciendeHoras
+002D   080C           00122         movf    Hora,W                  ; Va a visualizar las horas. 
+002E   211E           00123         call    BIN_a_BCD               ; Lo pasa a BCD.
+002F   2108           00124         call    LCD_Byte                ; Visualiza rechazando cero de las decenas.
+0030   2832           00125         goto    VisualizaMinutos
+0031                  00126 ApagaHoras
+0031   20FF           00127         call    LCD_DosEspaciosBlancos  ; Visualiza dos espacios en blanco.
+0032                  00128 VisualizaMinutos
+0032   303A           00129         movlw   ':'                     ; Envía ":" para separar datos.
+0033   20DE           00130         call    LCD_Caracter
+0034   080D           00131         movf    Minuto,W                ; Visualiza minutos.
+0035   211E           00132         call    BIN_a_BCD               ; Lo pasa a BCD.
+0036   210F           00133         call    LCD_ByteCompleto
+0037   303A           00134         movlw   ':'                     ; Envía ":" para separar datos.
+0038   20DE           00135         call    LCD_Caracter
+0039   080E           00136         movf    Segundo,W               ; Visualiza segundos.
+003A   211E           00137         call    BIN_a_BCD               ; Lo pasa a BCD.
+003B   210F           00138         call    LCD_ByteCompleto
+003C   0008           00139         return
+                      00140 ;
+                      00141 ; Subrutina "Incrementar" ---------------------------------------------------------------
+                      00142 ;
+                      00143 ; Subrutina de atención a la interrupción por cambio de la línea RB6 al cual se ha
+                      00144 ; conectado el pulsador "INCREMENTAR". Incrementa la variable Hora.
+                      00145 
+003D                  00146 Incrementar
+003D   2070           00147         call    Retardo_20ms            ; Si es un rebote sale.
+003E   1B06           00148         btfsc   IncrementarPulsador
+003F   2846           00149         goto    FinIncrementar
+0040   1410           00150         bsf     F_Intermitencia         ; Visualiza siempre mientras incrementa.
+0041   204D           00151         call    IncrementaHoras
+0042   2029           00152         call    VisualizaReloj          ; Visualiza mientras espera que deje
+0043   206A           00153         call    Retardo_200ms           ; de pulsar.
+0044   1F06           00154         btfss   IncrementarPulsador     ; Mientras permanezca pulsado,
+0045   283D           00155         goto    Incrementar             ; incrementará el digito.
+MPASM 03.50 Released                         INT_RELOJ_02.ASM   10-9-2003  11:44:50         PAGE  4
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0046                  00156 FinIncrementar
+0046   0008           00157         return
+                      00158 
+                      00159 ; Subrutina "IncrementaRegistro50ms" ----------------------------------------------------
+                      00160 ;
+                      00161 ; Incrementa el valor de la variable Registro50ms. Cuando llega a 10, lo cual supone 
+                      00162 ; medio segundo (50 ms x 10 = 500 ms), lo resetea y sale con el Carry a "1".
+                      00163 ;
+0047                  00164 IncrementaRegistro50ms
+0047   0A8F           00165         incf    Registro50ms,F
+0048   300A           00166         movlw   .10
+0049   020F           00167         subwf   Registro50ms,W          ; (W)=(Registro50ms)-10
+004A   1803           00168         btfsc   STATUS,C                ; ¿C=0?, ¿(W) negativo?, ¿(Registro50ms)<10?
+004B   018F           00169         clrf    Registro50ms            ; Lo inicializa si ha superado su valor máximo.
+004C   0008           00170         return
+                      00171 
+                      00172 ; Subrutina "IncrementaHoras" -----------------------------------------------------------
+                      00173 ;
+                      00174 ; Incrementa el valor de la variable Hora. Si igual el valor máximo de 24, lo resetea
+                      00175 ; y sale con el Carry a "1".
+                      00176 ;
+004D                  00177 IncrementaHoras
+004D   0A8C           00178         incf    Hora,F                  ; Incrementa las horas.
+004E   3018           00179         movlw   .24
+004F   020C           00180         subwf   Hora,W                  ; ¿Ha superado su valor máximo?. (W)=(Hora)-24.
+0050   1803           00181         btfsc   STATUS,C                ; ¿C=0?, ¿(W) negativo?, ¿(Hora)<24?
+0051   018C           00182         clrf    Hora                    ; Lo inicializa si ha superado su valor máximo.
+0052   0008           00183         return
+                      00184 ;
+                      00185         INCLUDE  <RETARDOS.INC>
+                      00001 ;**************************** Librería "RETARDOS.INC" *********************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Librería con múltiples subrutinas de retardos, desde 4 microsegundos hasta 20 segundos. 
+                      00010 ; Además se pueden implementar otras subrutinas muy fácilmente.
+                      00011 ;
+                      00012 ; Se han calculado para un sistema microcontrolador con un PIC trabajando con un cristal
+                      00013 ; de cuarzo a 4 MHz. Como cada ciclo máquina son 4 ciclos de reloj, resulta que cada
+                      00014 ; ciclo máquina tarda 4 x 1/4MHz = 1 µs.
+                      00015 ;
+                      00016 ; En los comentarios, "cm" significa "ciclos máquina".
+                      00017 ;
+                      00018 ; ZONA DE DATOS *********************************************************************
+                      00019 
+                      00020         CBLOCK
+  00000011            00021         R_ContA                         ; Contadores para los retardos.
+  00000012            00022         R_ContB
+  00000013            00023         R_ContC
+MPASM 03.50 Released                         INT_RELOJ_02.ASM   10-9-2003  11:44:50         PAGE  5
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00024         ENDC
+                      00025 ;
+                      00026 ; RETARDOS de 4 hasta 10 microsegundos ---------------------------------------------------
+                      00027 ;
+                      00028 ; A continuación retardos pequeños teniendo en cuenta que para una frecuencia de 4 MHZ,
+                      00029 ; la llamada a subrutina "call" tarda 2 ciclos máquina, el retorno de subrutina
+                      00030 ; "return" toma otros 2 ciclos máquina y cada instrucción "nop" tarda 1 ciclo máquina.
+                      00031 ;
+0053                  00032 Retardo_10micros                                ; La llamada "call" aporta 2 ciclos máquina.
+0053   0000           00033         nop                             ; Aporta 1 ciclo máquina.
+0054   0000           00034         nop                             ; Aporta 1 ciclo máquina.
+0055   0000           00035         nop                             ; Aporta 1 ciclo máquina.
+0056   0000           00036         nop                             ; Aporta 1 ciclo máquina.
+0057   0000           00037         nop                             ; Aporta 1 ciclo máquina.
+0058                  00038 Retardo_5micros                         ; La llamada "call" aporta 2 ciclos máquina.
+0058   0000           00039         nop                             ; Aporta 1 ciclo máquina.
+0059                  00040 Retardo_4micros                         ; La llamada "call" aporta 2 ciclos máquina.
+0059   0008           00041         return                          ; El salto del retorno aporta 2 ciclos máquina.
+                      00042 ;
+                      00043 ; RETARDOS de 20 hasta 500 microsegundos ------------------------------------------------
+                      00044 ;
+005A                  00045 Retardo_500micros                               ; La llamada "call" aporta 2 ciclos máquina.
+005A   0000           00046         nop                             ; Aporta 1 ciclo máquina.
+005B   30A4           00047         movlw   d'164'                  ; Aporta 1 ciclo máquina. Este es el valor de "K".
+005C   2866           00048         goto    RetardoMicros           ; Aporta 2 ciclos máquina.
+005D                  00049 Retardo_200micros                               ; La llamada "call" aporta 2 ciclos máquina.
+005D   0000           00050         nop                             ; Aporta 1 ciclo máquina.
+005E   3040           00051         movlw   d'64'                   ; Aporta 1 ciclo máquina. Este es el valor de "K".
+005F   2866           00052         goto    RetardoMicros           ; Aporta 2 ciclos máquina.
+0060                  00053 Retardo_100micros                               ; La llamada "call" aporta 2 ciclos máquina.
+0060   301F           00054         movlw   d'31'                   ; Aporta 1 ciclo máquina. Este es el valor de "K".
+0061   2866           00055         goto    RetardoMicros           ; Aporta 2 ciclos máquina.
+0062                  00056 Retardo_50micros                                ; La llamada "call" aporta 2 ciclos máquina.
+0062   0000           00057         nop                             ; Aporta 1 ciclo máquina.
+0063   300E           00058         movlw   d'14'                   ; Aporta 1 ciclo máquina. Este es el valor de "K".
+0064   2866           00059         goto    RetardoMicros           ; Aporta 2 ciclos máquina.
+0065                  00060 Retardo_20micros                                ; La llamada "call" aporta 2 ciclos máquina.
+0065   3005           00061         movlw   d'5'                    ; Aporta 1 ciclo máquina. Este es el valor de "K".
+                      00062 ;
+                      00063 ; El próximo bloque "RetardoMicros" tarda:
+                      00064 ; 1 + (K-1) + 2 + (K-1)x2 + 2 = (2 + 3K) ciclos máquina.
+                      00065 ;
+0066                  00066 RetardoMicros
+0066   0091           00067         movwf   R_ContA                 ; Aporta 1 ciclo máquina.
+0067                  00068 Rmicros_Bucle
+0067   0B91           00069         decfsz  R_ContA,F               ; (K-1)x1 cm (cuando no salta) + 2 cm (al saltar).
+0068   2867           00070         goto    Rmicros_Bucle           ; Aporta (K-1)x2 ciclos máquina.
+0069   0008           00071         return                          ; El salto del retorno aporta 2 ciclos máquina.
+                      00072 ;
+                      00073 ;En total estas subrutinas tardan:
+                      00074 ; - Retardo_500micros:  2 + 1 + 1 + 2 + (2 + 3K) = 500 cm = 500 µs. (para K=164 y 4 MHz).
+                      00075 ; - Retardo_200micros:  2 + 1 + 1 + 2 + (2 + 3K) = 200 cm = 200 µs. (para K= 64 y 4 MHz).
+                      00076 ; - Retardo_100micros:  2     + 1 + 2 + (2 + 3K) = 100 cm = 100 µs. (para K= 31 y 4 MHz).
+MPASM 03.50 Released                         INT_RELOJ_02.ASM   10-9-2003  11:44:50         PAGE  6
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00077 ; - Retardo_50micros :  2 + 1 + 1 + 2 + (2 + 3K) =  50 cm =  50 µs. (para K= 14 y 4 MHz).
+                      00078 ; - Retardo_20micros :  2     + 1     + (2 + 3K) =  20 cm =  20 µs. (para K=  5 y 4 MHz).
+                      00079 ;
+                      00080 ; RETARDOS de 1 ms hasta 200 ms. --------------------------------------------------------
+                      00081 ;
+006A                  00082 Retardo_200ms                           ; La llamada "call" aporta 2 ciclos máquina.
+006A   30C8           00083         movlw   d'200'                  ; Aporta 1 ciclo máquina. Este es el valor de "M".
+006B   2879           00084         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+006C                  00085 Retardo_100ms                           ; La llamada "call" aporta 2 ciclos máquina.
+006C   3064           00086         movlw   d'100'                  ; Aporta 1 ciclo máquina. Este es el valor de "M".
+006D   2879           00087         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+006E                  00088 Retardo_50ms                            ; La llamada "call" aporta 2 ciclos máquina.
+006E   3032           00089         movlw   d'50'                   ; Aporta 1 ciclo máquina. Este es el valor de "M".
+006F   2879           00090         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+0070                  00091 Retardo_20ms                            ; La llamada "call" aporta 2 ciclos máquina.
+0070   3014           00092         movlw   d'20'                   ; Aporta 1 ciclo máquina. Este es el valor de "M".
+0071   2879           00093         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+0072                  00094 Retardo_10ms                            ; La llamada "call" aporta 2 ciclos máquina.
+0072   300A           00095         movlw   d'10'                   ; Aporta 1 ciclo máquina. Este es el valor de "M".
+0073   2879           00096         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+0074                  00097 Retardo_5ms                             ; La llamada "call" aporta 2 ciclos máquina.
+0074   3005           00098         movlw   d'5'                    ; Aporta 1 ciclo máquina. Este es el valor de "M".
+0075   2879           00099         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+0076                  00100 Retardo_2ms                             ; La llamada "call" aporta 2 ciclos máquina.
+0076   3002           00101         movlw   d'2'                    ; Aporta 1 ciclo máquina. Este es el valor de "M".
+0077   2879           00102         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+0078                  00103 Retardo_1ms                             ; La llamada "call" aporta 2 ciclos máquina.
+0078   3001           00104         movlw   d'1'                    ; Aporta 1 ciclo máquina. Este es el valor de "M".
+                      00105 ;
+                      00106 ; El próximo bloque "Retardos_ms" tarda:
+                      00107 ; 1 + M + M + KxM + (K-1)xM + Mx2 + (K-1)Mx2 + (M-1) + 2 + (M-1)x2 + 2 =
+                      00108 ; = (2 + 4M + 4KM) ciclos máquina. Para K=249 y M=1 supone 1002 ciclos máquina
+                      00109 ; que a 4 MHz son 1002 µs = 1 ms.
+                      00110 ;
+0079                  00111 Retardos_ms
+0079   0092           00112         movwf   R_ContB                 ; Aporta 1 ciclo máquina.
+007A                  00113 R1ms_BucleExterno
+007A   30F9           00114         movlw   d'249'                  ; Aporta Mx1 ciclos máquina. Este es el valor de "K".
+007B   0091           00115         movwf   R_ContA                 ; Aporta Mx1 ciclos máquina.
+007C                  00116 R1ms_BucleInterno
+007C   0000           00117         nop                             ; Aporta KxMx1 ciclos máquina.
+007D   0B91           00118         decfsz  R_ContA,F               ; (K-1)xMx1 cm (cuando no salta) + Mx2 cm (al saltar).
+007E   287C           00119         goto    R1ms_BucleInterno               ; Aporta (K-1)xMx2 ciclos máquina.
+007F   0B92           00120         decfsz  R_ContB,F               ; (M-1)x1 cm (cuando no salta) + 2 cm (al saltar).
+0080   287A           00121         goto    R1ms_BucleExterno       ; Aporta (M-1)x2 ciclos máquina.
+0081   0008           00122         return                          ; El salto del retorno aporta 2 ciclos máquina.
+                      00123 ;
+                      00124 ;En total estas subrutinas tardan:
+                      00125 ; - Retardo_200ms:      2 + 1 + 2 + (2 + 4M + 4KM) = 200007 cm = 200 ms. (M=200 y K=249).
+                      00126 ; - Retardo_100ms:      2 + 1 + 2 + (2 + 4M + 4KM) = 100007 cm = 100 ms. (M=100 y K=249).
+                      00127 ; - Retardo_50ms :      2 + 1 + 2 + (2 + 4M + 4KM) =  50007 cm =  50 ms. (M= 50 y K=249).
+                      00128 ; - Retardo_20ms :      2 + 1 + 2 + (2 + 4M + 4KM) =  20007 cm =  20 ms. (M= 20 y K=249).
+                      00129 ; - Retardo_10ms :      2 + 1 + 2 + (2 + 4M + 4KM) =  10007 cm =  10 ms. (M= 10 y K=249).
+MPASM 03.50 Released                         INT_RELOJ_02.ASM   10-9-2003  11:44:50         PAGE  7
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00130 ; - Retardo_5ms  :      2 + 1 + 2 + (2 + 4M + 4KM) =   5007 cm =   5 ms. (M=  5 y K=249).
+                      00131 ; - Retardo_2ms  :      2 + 1 + 2 + (2 + 4M + 4KM) =   2007 cm =   2 ms. (M=  2 y K=249).
+                      00132 ; - Retardo_1ms  :      2 + 1     + (2 + 4M + 4KM) =   1005 cm =   1 ms. (M=  1 y K=249).
+                      00133 ;
+                      00134 ; RETARDOS de 0.5 hasta 20 segundos ---------------------------------------------------
+                      00135 ;
+0082                  00136 Retardo_20s                             ; La llamada "call" aporta 2 ciclos máquina.
+0082   30C8           00137         movlw   d'200'                  ; Aporta 1 ciclo máquina. Este es el valor de "N".
+0083   288D           00138         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+0084                  00139 Retardo_10s                             ; La llamada "call" aporta 2 ciclos máquina.
+0084   3064           00140         movlw   d'100'                  ; Aporta 1 ciclo máquina. Este es el valor de "N".
+0085   288D           00141         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+0086                  00142 Retardo_5s                              ; La llamada "call" aporta 2 ciclos máquina.
+0086   3032           00143         movlw   d'50'                   ; Aporta 1 ciclo máquina. Este es el valor de "N".
+0087   288D           00144         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+0088                  00145 Retardo_2s                              ; La llamada "call" aporta 2 ciclos máquina.
+0088   3014           00146         movlw   d'20'                   ; Aporta 1 ciclo máquina. Este es el valor de "N".
+0089   288D           00147         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+008A                  00148 Retardo_1s                              ; La llamada "call" aporta 2 ciclos máquina.
+008A   300A           00149         movlw   d'10'                   ; Aporta 1 ciclo máquina. Este es el valor de "N".
+008B   288D           00150         goto    Retardo_1Decima         ; Aporta 2 ciclos máquina.
+008C                  00151 Retardo_500ms                           ; La llamada "call" aporta 2 ciclos máquina.
+008C   3005           00152         movlw   d'5'                    ; Aporta 1 ciclo máquina. Este es el valor de "N".
+                      00153 ;
+                      00154 ; El próximo bloque "Retardo_1Decima" tarda:
+                      00155 ; 1 + N + N + MxN + MxN + KxMxN + (K-1)xMxN + MxNx2 + (K-1)xMxNx2 +
+                      00156 ;   + (M-1)xN + Nx2 + (M-1)xNx2 + (N-1) + 2 + (N-1)x2 + 2 =
+                      00157 ; = (2 + 4M + 4MN + 4KM) ciclos máquina. Para K=249, M=100 y N=1 supone 100011
+                      00158 ; ciclos máquina que a 4 MHz son 100011 µs = 100 ms = 0,1 s = 1 décima de segundo.
+                      00159 ;
+008D                  00160 Retardo_1Decima
+008D   0093           00161         movwf   R_ContC                 ; Aporta 1 ciclo máquina.
+008E                  00162 R1Decima_BucleExterno2
+008E   3064           00163         movlw   d'100'                  ; Aporta Nx1 ciclos máquina. Este es el valor de "M".
+008F   0092           00164         movwf   R_ContB                 ; Aporta Nx1 ciclos máquina.
+0090                  00165 R1Decima_BucleExterno
+0090   30F9           00166         movlw   d'249'                  ; Aporta MxNx1 ciclos máquina. Este es el valor de "K".
+0091   0091           00167         movwf   R_ContA                 ; Aporta MxNx1 ciclos máquina.
+0092                  00168 R1Decima_BucleInterno          
+0092   0000           00169         nop                             ; Aporta KxMxNx1 ciclos máquina.
+0093   0B91           00170         decfsz  R_ContA,F               ; (K-1)xMxNx1 cm (si no salta) + MxNx2 cm (al saltar).
+0094   2892           00171         goto    R1Decima_BucleInterno   ; Aporta (K-1)xMxNx2 ciclos máquina.
+0095   0B92           00172         decfsz  R_ContB,F               ; (M-1)xNx1 cm (cuando no salta) + Nx2 cm (al saltar).
+0096   2890           00173         goto    R1Decima_BucleExterno   ; Aporta (M-1)xNx2 ciclos máquina.
+0097   0B93           00174         decfsz  R_ContC,F               ; (N-1)x1 cm (cuando no salta) + 2 cm (al saltar).
+0098   288E           00175         goto    R1Decima_BucleExterno2  ; Aporta (N-1)x2 ciclos máquina.
+0099   0008           00176         return                          ; El salto del retorno aporta 2 ciclos máquina.
+                      00177 ;
+                      00178 ;En total estas subrutinas tardan:
+                      00179 ; - Retardo_20s:        2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) = 20000807 cm = 20 s.
+                      00180 ;                       (N=200, M=100 y K=249).
+                      00181 ; - Retardo_10s:        2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) = 10000407 cm = 10 s.
+                      00182 ;                       (N=100, M=100 y K=249).
+MPASM 03.50 Released                         INT_RELOJ_02.ASM   10-9-2003  11:44:50         PAGE  8
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00183 ; - Retardo_5s:         2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) =  5000207 cm =  5 s.
+                      00184 ;                       (N= 50, M=100 y K=249).
+                      00185 ; - Retardo_2s:         2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) =  2000087 cm =  2 s.
+                      00186 ;                       (N= 20, M=100 y K=249).
+                      00187 ; - Retardo_1s:         2 + 1 + 2 + (2 + 4N + 4MN + 4KMN) =  1000047 cm =  1 s.
+                      00188 ;                       (N= 10, M=100 y K=249).
+                      00189 ; - Retardo_500ms:      2 + 1     + (2 + 4N + 4MN + 4KMN) =   500025 cm = 0,5 s.
+                      00190 ;                       (N=  5, M=100 y K=249).
+                      00186         INCLUDE  <LCD_4BIT.INC>
+                      00001 ;**************************** Librería "LCD_4BIT.INC" ***********************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Estas subrutinas permiten realizar las tareas básicas de control de un módulo LCD de 2
+                      00010 ; líneas por 16 caracteres, compatible con el modelo LM016L.
+                      00011 ;
+                      00012 ; El visualizador LCD está conectado al Puerto B del PIC mediante un bus de 4 bits. Las
+                      00013 ; conexiones son:
+                      00014 ;    -  Las 4 líneas superiores del módulo LCD, pines <DB7:DB4>  se conectan a las 4
+                      00015 ;       líneas superiores del Puerto B del PIC, pines <RB7:RB4>.
+                      00016 ;    -  Pin RS del LCD a la línea RA0 del PIC.
+                      00017 ;    -  Pin R/W del LCD a la línea RA1 del PIC, o a masa.
+                      00018 ;    -  Pin Enable del LCD a la línea RA2 del PIC.
+                      00019 ;
+                      00020 ; Se utilizan llamadas a subrutinas de retardo de tiempo localizadas en la librería RETARDOS.INC.
+                      00021 ;
+                      00022 ; ZONA DE DATOS *********************************************************************
+                      00023 
+                      00024         CBLOCK
+  00000014            00025         LCD_Dato
+  00000015            00026         LCD_GuardaDato
+  00000016            00027         LCD_GuardaTRISB
+  00000017            00028         LCD_Auxiliar1
+  00000018            00029         LCD_Auxiliar2
+                      00030         ENDC
+                      00031 
+  00000010            00032 LCD_CaracteresPorLinea  EQU     .16     ; Número de caracteres por línea de la pantalla.
+                      00033 
+                      00034 #DEFINE  LCD_PinRS      PORTA,0
+                      00035 #DEFINE  LCD_PinRW      PORTA,1
+                      00036 #DEFINE  LCD_PinEnable  PORTA,2
+                      00037 #DEFINE  LCD_BusDatos   PORTB
+                      00038 
+                      00039 ; Subrutina "LCD_Inicializa" ------------------------------------------------------------
+                      00040 ;
+                      00041 ; Inicialización del módulo LCD: Configura funciones del LCD, produce reset por software,
+                      00042 ; borra memoria y enciende pantalla. El fabricante especifica que para garantizar la
+                      00043 ; configuración inicial hay que hacerla como sigue:
+                      00044 ;
+MPASM 03.50 Released                         INT_RELOJ_02.ASM   10-9-2003  11:44:50         PAGE  9
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+009A                  00045 LCD_Inicializa
+009A   1683           00046         bsf     STATUS,RP0              ; Configura las líneas conectadas al pines RS,
+009B   1005           00047         bcf     LCD_PinRS               ; R/W y E.
+009C   1105           00048         bcf     LCD_PinEnable
+009D   1085           00049         bcf     LCD_PinRW
+009E   1283           00050         bcf     STATUS,RP0
+009F   1085           00051         bcf     LCD_PinRW               ; En caso de que esté conectado, le indica
+                      00052                                         ; que se va a escribir en el LCD.
+00A0   1105           00053         bcf     LCD_PinEnable           ; Impide funcionamiento del LCD, poniendo E=0.
+00A1   1005           00054         bcf     LCD_PinRS               ; Activa el Modo Comando, poniendo RS=0.
+00A2   2070           00055         call    Retardo_20ms
+00A3   3030           00056         movlw   b'00110000'     
+00A4   20B2           00057         call    LCD_EscribeLCD          ; Escribe el dato en el LCD.
+00A5   2074           00058         call    Retardo_5ms     
+00A6   3030           00059         movlw   b'00110000'     
+00A7   20B2           00060         call    LCD_EscribeLCD
+00A8   205D           00061         call    Retardo_200micros
+00A9   3030           00062         movlw   b'00110000'     
+00AA   20B2           00063         call    LCD_EscribeLCD
+00AB   3020           00064         movlw   b'00100000'             ; Interface de 4 bits.
+00AC   20B2           00065         call    LCD_EscribeLCD
+                      00066 
+                      00067 ; Ahora configura el resto de los parámetros: 
+                      00068 
+00AD   20DB           00069         call    LCD_2Lineas4Bits5x7     ; LCD de 2 líneas y caracteres de 5x7 puntos.
+00AE   20D9           00070         call    LCD_Borra               ; Pantalla encendida y limpia. Cursor al principio
+00AF   20D7           00071         call    LCD_CursorOFF           ; de la línea 1. Cursor apagado.
+00B0   20C9           00072         call    LCD_CursorIncr          ; Cursor en modo incrementar.
+00B1   0008           00073         return
+                      00074 
+                      00075 ; Subrutina "LCD_EscribeLCD" -----------------------------------------------------------
+                      00076 ;
+                      00077 ; Envía el dato del registro de trabajo W al bus de dato y produce un pequeño pulso en el
+                      00078 ; pin "Enable" del LCD. Para no alterar el contenido de las líneas de la parte baja del Puerto B
+                      00079 ; que no son utilizadas para el LCD (pines RB3.. RB0), primero se lee estas líneas y después
+                      00080 ; se vuelve a enviar este dato sin cambiarlo.
+                      00081 
+00B2                  00082 LCD_EscribeLCD
+00B2   39F0           00083         andlw   b'11110000'             ; Se queda con el nibble alto del dato que es el
+00B3   0094           00084         movwf   LCD_Dato                ; que hay que enviar y lo guarda.
+00B4   0806           00085         movf    LCD_BusDatos,W          ; Lee la información actual de la parte baja
+00B5   390F           00086         andlw   b'00001111'             ; del Puerto B, que no se debe alterar.
+00B6   0494           00087         iorwf   LCD_Dato,F              ; Enviará la parte alta del dato de entrada
+                      00088                                         ; y en la parte baja lo que había antes.
+00B7   1683           00089         bsf     STATUS,RP0              ; Acceso al Banco 1.
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+00B8   0806           00090         movf    TRISB,W         ; Guarda la configuración que tenía antes TRISB.
+00B9   0096           00091         movwf   LCD_GuardaTRISB
+00BA   300F           00092         movlw   b'00001111'             ; Las 4 líneas inferiores del Puerto B se dejan 
+00BB   0586           00093         andwf   PORTB,F                 ; como estaban y las 4 superiores como salida.
+00BC   1283           00094         bcf     STATUS,RP0              ; Acceso al Banco 0.
+                      00095 ;
+00BD   0814           00096         movf    LCD_Dato,W              ; Recupera el dato a enviar.
+MPASM 03.50 Released                         INT_RELOJ_02.ASM   10-9-2003  11:44:50         PAGE 10
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+00BE   0086           00097         movwf   LCD_BusDatos            ; Envía el dato al módulo LCD.
+00BF   1505           00098         bsf     LCD_PinEnable           ; Permite funcionamiento del LCD, mediante un pequeño
+00C0   1105           00099         bcf     LCD_PinEnable           ; pulso y termina impidiendo el funcionamiento del LCD.
+00C1   1C05           00100         btfss   LCD_PinRS               ; Debe garantizar una correcta escritura manteniendo 
+00C2   2076           00101         call    Retardo_2ms             ; 2 ms en modo comando y 50 µs en modo cáracter.
+00C3   2062           00102         call    Retardo_50micros
+00C4   1683           00103         bsf     STATUS,RP0              ; Acceso al Banco 1. Restaura el antiguo valor en
+00C5   0816           00104         movf    LCD_GuardaTRISB,W       ; la configuración del Puerto B.
+00C6   0086           00105         movwf   PORTB                   ; Realmente es TRISB.
+00C7   1283           00106         bcf     STATUS,RP0              ; Acceso al Banco 0.
+00C8   0008           00107         return
+                      00108 
+                      00109 ; Subrutinas variadas para el control del módulo LCD -----------------------------------------
+                      00110 ;
+                      00111 ;Los comandos que pueden ser ejecutados son:
+                      00112 ;
+00C9                  00113 LCD_CursorIncr                          ; Cursor en modo incrementar.
+00C9   3006           00114         movlw   b'00000110'
+00CA   28DC           00115         goto    LCD_EnviaComando
+00CB                  00116 LCD_Linea1                              ; Cursor al principio de la Línea 1.
+00CB   3080           00117         movlw   b'10000000'             ; Dirección 00h de la DDRAM
+00CC   28DC           00118         goto    LCD_EnviaComando
+00CD                  00119 LCD_Linea2                              ; Cursor al principio de la Línea 2.
+00CD   30C0           00120         movlw   b'11000000'             ; Dirección 40h de la DDRAM
+00CE   28DC           00121         goto    LCD_EnviaComando
+00CF                  00122 LCD_PosicionLinea1                      ; Cursor a posición de la Línea 1, a partir de la
+00CF   3880           00123         iorlw   b'10000000'             ; dirección 00h de la DDRAM más el valor del
+00D0   28DC           00124         goto    LCD_EnviaComando        ; registro W.
+00D1                  00125 LCD_PosicionLinea2                      ; Cursor a posición de la Línea 2, a partir de la
+00D1   38C0           00126         iorlw   b'11000000'             ; dirección 40h de la DDRAM más el valor del
+00D2   28DC           00127         goto    LCD_EnviaComando        ; registro W.
+00D3                  00128 LCD_OFF                         ; Pantalla apagada.
+00D3   3008           00129         movlw   b'00001000'
+00D4   28DC           00130         goto    LCD_EnviaComando
+00D5                  00131 LCD_CursorON                            ; Pantalla encendida y cursor encendido.
+00D5   300E           00132         movlw   b'00001110'
+00D6   28DC           00133         goto    LCD_EnviaComando
+00D7                  00134 LCD_CursorOFF                           ; Pantalla encendida y cursor apagado.
+00D7   300C           00135         movlw   b'00001100'
+00D8   28DC           00136         goto    LCD_EnviaComando
+00D9                  00137 LCD_Borra                               ; Borra toda la pantalla, memoria DDRAM y pone el 
+00D9   3001           00138         movlw   b'00000001'             ; cursor a principio de la línea 1.
+00DA   28DC           00139         goto    LCD_EnviaComando
+00DB                  00140 LCD_2Lineas4Bits5x7                     ; Define la pantalla de 2 líneas, con caracteres
+00DB   3028           00141         movlw   b'00101000'             ; de 5x7 puntos y conexión al PIC mediante bus de
+                      00142 ;       goto    LCD_EnviaComando        ; 4 bits. 
+                      00143 
+                      00144 ; Subrutinas "LCD_EnviaComando" y "LCD_Caracter" ------------------------------------
+                      00145 ;
+                      00146 ; "LCD_EnviaComando": Escribe un comando en el registro del módulo LCD. La palabra de
+                      00147 ; comando ha sido entregada a través del registro W.  Trabaja en Modo Comando.
+                      00148 ; "LCD_Caracter": Escribe en la memoria DDRAM del LCD el carácter ASCII introducido a
+                      00149 ; a través del registro W. Trabaja en Modo Dato.
+MPASM 03.50 Released                         INT_RELOJ_02.ASM   10-9-2003  11:44:50         PAGE 11
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00150 ;
+00DC                  00151 LCD_EnviaComando
+00DC   1005           00152         bcf     LCD_PinRS               ; Activa el Modo Comando, poniendo RS=0.
+00DD   28E0           00153         goto    LCD_Envia
+00DE                  00154 LCD_Caracter
+00DE   1405           00155         bsf     LCD_PinRS               ; Activa el "Modo Dato", poniendo RS=1.
+00DF   20E5           00156         call    LCD_CodigoCGROM ; Obtiene el código para correcta visualización.
+00E0                  00157 LCD_Envia
+00E0   0095           00158         movwf   LCD_GuardaDato          ; Guarda el dato a enviar.
+00E1   20B2           00159         call    LCD_EscribeLCD          ; Primero envía el nibble alto.
+00E2   0E15           00160         swapf   LCD_GuardaDato,W        ; Ahora envía el nibble bajo. Para ello pasa el
+                      00161                                         ; nibble bajo del dato a enviar a parte alta del byte.
+00E3   20B2           00162         call    LCD_EscribeLCD          ; Se envía al visualizador LCD.
+00E4   0008           00163         return  
+                      00164 
+                      00165 ; Subrutina "LCD_CodigoCGROM" -----------------------------------------------------------
+                      00166 ;
+                      00167 ; A partir del carácter ASCII número 127, los códigos de los caracteres definidos en la
+                      00168 ; tabla CGROM del LM016L no coinciden con los códigos ASCII. Así por ejemplo, el código
+                      00169 ; ASCII de la "Ñ" en la tabla CGRAM del LM016L es EEh.
+                      00170 ;
+                      00171 ; Esta subrutina convierte los códigos ASCII de la "Ñ", "º" y otros, a códigos CGROM para que
+                      00172 ; que puedan ser visualizado en el módulo LM016L.
+                      00173 ; 
+                      00174 ; Entrada:      En (W) el código ASCII del carácter que se desea visualizar.
+                      00175 ; Salida:       En (W) el código definido en la tabla CGROM.
+                      00176 
+00E5                  00177 LCD_CodigoCGROM
+00E5   0094           00178         movwf   LCD_Dato                ; Guarda el valor del carácter y comprueba si es
+00E6                  00179 LCD_EnheMinuscula                       ; un carácter especial.
+00E6   3CF1           00180         sublw   'ñ'                     ; ¿Es la "ñ"?
+00E7   1D03           00181         btfss   STATUS,Z
+00E8   28EC           00182         goto    LCD_EnheMayuscula       ; No es "ñ".
+00E9   30EE           00183         movlw   b'11101110'             ; Código CGROM de la "ñ".
+00EA   0094           00184         movwf   LCD_Dato
+00EB   28F9           00185         goto    LCD_FinCGROM
+00EC                  00186 LCD_EnheMayuscula
+00EC   0814           00187         movf    LCD_Dato,W              ; Recupera el código ASCII de entrada.
+00ED   3CD1           00188         sublw   'Ñ'                     ; ¿Es la "Ñ"?
+00EE   1D03           00189         btfss   STATUS,Z
+00EF   28F3           00190         goto    LCD_Grado               ; No es "Ñ".
+00F0   30EE           00191         movlw   b'11101110'             ; Código CGROM de la "ñ". (No hay símbolo para
+00F1   0094           00192         movwf   LCD_Dato                ; la "Ñ" mayúscula en la CGROM).
+00F2   28F9           00193         goto    LCD_FinCGROM    
+00F3                  00194 LCD_Grado
+00F3   0814           00195         movf    LCD_Dato,W              ; Recupera el código ASCII de entrada.
+00F4   3CBA           00196         sublw   'º'                     ; ¿Es el símbolo "º"?
+00F5   1D03           00197         btfss   STATUS,Z
+00F6   28F9           00198         goto    LCD_FinCGROM            ; No es "º".
+00F7   30DF           00199         movlw   b'11011111'             ; Código CGROM del símbolo "º".
+00F8   0094           00200         movwf   LCD_Dato
+00F9                  00201 LCD_FinCGROM
+00F9   0814           00202         movf    LCD_Dato,W              ; En (W) el código buscado.
+MPASM 03.50 Released                         INT_RELOJ_02.ASM   10-9-2003  11:44:50         PAGE 12
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+00FA   0008           00203         return
+                      00204 
+                      00205 ; Subrutina "LCD_DosEspaciosBlancos" y "LCD_LineaBlanco" --------------------------------
+                      00206 ;
+                      00207 ; Visualiza espacios en blanco.
+                      00208 
+00FB                  00209 LCD_LineaEnBlanco
+00FB   3010           00210         movlw   LCD_CaracteresPorLinea
+00FC   2902           00211         goto    LCD_EnviaBlancos
+00FD                  00212 LCD_UnEspacioBlanco
+00FD   3001           00213         movlw   .1
+00FE   2902           00214         goto    LCD_EnviaBlancos
+00FF                  00215 LCD_DosEspaciosBlancos
+00FF   3002           00216         movlw   .2
+0100   2902           00217         goto    LCD_EnviaBlancos
+0101                  00218 LCD_TresEspaciosBlancos
+0101   3003           00219         movlw   .3
+0102                  00220 LCD_EnviaBlancos
+0102   0097           00221         movwf   LCD_Auxiliar1           ; (LCD_Auxiliar1) se utiliza como contador.
+0103                  00222 LCD_EnviaOtroBlanco     
+0103   3020           00223         movlw   ' '                     ; Esto es un espacio en blanco.
+0104   20DE           00224         call    LCD_Caracter            ; Visualiza tanto espacios en blanco como se
+0105   0B97           00225         decfsz  LCD_Auxiliar1,F         ; haya cargado en (LCD_Auxiliar1).
+0106   2903           00226         goto    LCD_EnviaOtroBlanco
+0107   0008           00227         return
+                      00228 
+                      00229 ; Subrutinas "LCD_ByteCompleto" y "LCD_Byte" --------------------------------------------
+                      00230 ;
+                      00231 ; Subrutina "LCD_ByteCompleto": Visualiza el byte que almacena el registro W en el
+                      00232 ; lugar actual de la pantalla. Por ejemplo, si (W)=b'10101110' visualiza "AE".
+                      00233 ;
+                      00234 ; Subrutina "LCD_Byte" igual que la anterior, pero en caso de que el nibble alto sea cero, 
+                      00235 ; visualiza en su lugar un espacio en blanco. Por ejemplo si (W)=b'10101110' visualiza "AE"
+                      00236 ; y si (W)=b'00001110', visualiza " E" (un espacio blanco delante).
+                      00237 ;
+                      00238 ; Utilizan la subrutina "LCD_Nibble" que se analiza más adelante.
+                      00239 ;
+0108                  00240 LCD_Byte
+0108   0098           00241         movwf   LCD_Auxiliar2           ; Guarda el valor de entrada.
+0109   39F0           00242         andlw   b'11110000'             ; Analiza si el nibble alto es cero.
+010A   1D03           00243         btfss   STATUS,Z                ; Si es cero lo apaga.
+010B   2910           00244         goto    LCD_VisualizaAlto               ; No es cero y lo visualiza.
+010C   3020           00245         movlw   ' '                     ; Visualiza un espacio en blanco.
+010D   20DE           00246         call    LCD_Caracter
+010E   2912           00247         goto    LCD_VisualizaBajo
+                      00248 
+010F                  00249 LCD_ByteCompleto
+010F   0098           00250         movwf   LCD_Auxiliar2           ; Guarda el valor de entrada.
+0110                  00251 LCD_VisualizaAlto
+0110   0E18           00252         swapf   LCD_Auxiliar2,W         ; Pone el nibble alto en la parte baja.
+0111   2113           00253         call    LCD_Nibble              ; Lo visualiza.
+0112                  00254 LCD_VisualizaBajo
+0112   0818           00255         movf    LCD_Auxiliar2,W         ; Repite el proceso con el nibble bajo.
+MPASM 03.50 Released                         INT_RELOJ_02.ASM   10-9-2003  11:44:50         PAGE 13
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00256 ;       call    LCD_Nibble              ; Lo visualiza.
+                      00257 ;       return
+                      00258 
+                      00259 ; Subrutina "LCD_Nibble" ----------------------------------------------------------------
+                      00260 ;
+                      00261 ; Visualiza en el lugar actual de la pantalla, el valor hexadecimal que almacena en el nibble
+                      00262 ; bajo del registro W. El nibble alto de W no es tenido en cuenta. Ejemplos:
+                      00263 ; - Si (W)=b'01010110', se visualizará "6". 
+                      00264 ; - Si (W)=b'10101110', se visualizará "E". 
+                      00265 ;
+0113                  00266 LCD_Nibble
+0113   390F           00267         andlw   b'00001111'             ; Se queda con la parte baja.
+0114   0097           00268         movwf   LCD_Auxiliar1           ; Lo guarda.
+0115   3C09           00269         sublw   0x09                    ; Comprueba si hay que representarlo con letra.
+0116   1C03           00270         btfss   STATUS,C        
+0117   291B           00271         goto    LCD_EnviaByteLetra
+0118   0817           00272         movf    LCD_Auxiliar1,W
+0119   3E30           00273         addlw   '0'                     ; El número se pasa a carácter ASCII sumándole
+011A   291D           00274         goto    LCD_FinVisualizaDigito  ; el ASCII del cero y lo visualiza.
+011B                  00275 LCD_EnviaByteLetra
+011B   0817           00276         movf    LCD_Auxiliar1,W
+011C   3E37           00277         addlw   'A'-0x0A                        ; Sí, por tanto, se le suma el ASCII de la 'A'.
+011D                  00278 LCD_FinVisualizaDigito
+011D   28DE           00279         goto    LCD_Caracter            ; Y visualiza el carácter. Se hace con un "goto"
+                      00280                                         ; para no sobrecargar la pila.
+                      00187         INCLUDE  <BIN_BCD.INC>
+                      00001 ;******************************** Librería "BIN_BCD.INC" ********************************
+                      00002 ;
+                      00003 ; Un número binario de 8 bits es convertido en BCD. El resultado se guarda en tres
+                      00004 ; posiciones de memorias llamadas BCD_Centenas, BCD_Decenas y BCD_Unidades.
+                      00005 ;
+                      00006 ; El procedimiento utilizado es mediante restas de 10 tal como se explicó en el capítulo 9.
+                      00007 ;
+                      00008 ; Entrada:      En el registro W el número binario a convertir.
+                      00009 ; Salidas:      En (BCD_Centenas), (BCD_Decenas) y (BCD_Unidades).
+                      00010 ;       En el registro W también las decenas (nibble alto) y unidades (bajo).
+                      00011 
+                      00012 ; Subrutina "BIN_a_BCD" -----------------------------------------------------------------
+                      00013 
+                      00014         CBLOCK                          ; En las subrutinas no se debe fijar la dirección
+  00000019            00015         BCD_Centenas                    ; de la RAM de usuario. Se toma a continuación de
+  0000001A            00016         BCD_Decenas                     ; la última asignada.
+  0000001B            00017         BCD_Unidades    
+                      00018         ENDC
+                      00019 ;
+011E                  00020 BIN_a_BCD
+011E   0199           00021         clrf    BCD_Centenas            ; Carga los registros con el resultado inicial.
+011F   019A           00022         clrf    BCD_Decenas             ; En principio las centenas y decenas a cero.
+0120   009B           00023         movwf   BCD_Unidades            ; Se carga el número binario a convertir.
+0121                  00024 BCD_Resta10
+0121   300A           00025         movlw   .10                     ; A las unidades se le va restando 10 en cada
+0122   021B           00026         subwf   BCD_Unidades,W          ; pasada. (W)=(BCD_Unidades) -10.
+0123   1C03           00027         btfss   STATUS,C                ; ¿(BCD_Unidades)>=10?, ¿(W) positivo?, ¿C = 1?.
+MPASM 03.50 Released                         INT_RELOJ_02.ASM   10-9-2003  11:44:50         PAGE 14
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0124   292E           00028         goto    BIN_BCD_Fin             ; No, es menor de 10. Se acabó.
+0125                  00029 BCD_IncrementaDecenas
+0125   009B           00030         movwf   BCD_Unidades            ; Recupera lo que queda por restar.
+0126   0A9A           00031         incf    BCD_Decenas,F           ; Incrementa las decenas y comprueba si ha llegado
+0127   300A           00032         movlw   .10                     ; a 10. Lo hace mediante una resta.
+0128   021A           00033         subwf   BCD_Decenas,W           ; (W)=(BCD_Decenas)-10).
+0129   1C03           00034         btfss   STATUS,C                ; ¿(BCD_Decenas)>=10?, ¿(W) positivo?, ¿C = 1?.
+012A   2921           00035         goto    BCD_Resta10             ; No. Vuelve a dar otra pasada, restándole 10 a
+012B                  00036 BCD_IncrementaCentenas                  ; las unidades.
+012B   019A           00037         clrf    BCD_Decenas             ; Pone a cero las decenas 
+012C   0A99           00038         incf    BCD_Centenas,F          ; e incrementa las centenas.
+012D   2921           00039         goto    BCD_Resta10             ; Otra pasada: Resta 10 al número a convertir.
+012E                  00040 BIN_BCD_Fin
+012E   0E1A           00041         swapf   BCD_Decenas,W           ; En el nibble alto de (W) también las decenas.
+012F   071B           00042         addwf   BCD_Unidades,W          ; En el nibble bajo de (W) las unidades.
+0130   0008           00043         return                          ; Vuelve al programa principal.
+                      00044         
+                      00045 ; La directiva "END" se debe poner en el programa principal, no aquí.
+                      00188         END
+MPASM 03.50 Released                         INT_RELOJ_02.ASM   10-9-2003  11:44:50         PAGE 15
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+ApagaHoras                        00000031
+BCD_Centenas                      00000019
+BCD_Decenas                       0000001A
+BCD_IncrementaCentenas            0000012B
+BCD_IncrementaDecenas             00000125
+BCD_Resta10                       00000121
+BCD_Unidades                      0000001B
+BIN_BCD_Fin                       0000012E
+BIN_a_BCD                         0000011E
+C                                 00000000
+DC                                00000001
+EEADR                             00000009
+EECON1                            00000088
+EECON2                            00000089
+EEDATA                            00000008
+EEIE                              00000006
+EEIF                              00000004
+EnciendeHoras                     0000002D
+F                                 00000001
+FSR                               00000004
+F_Intermitencia                   Intermitencia,0
+FinIncrementar                    00000046
+FinInterrupcion                   0000001A
+FinReloj                          00000028
+GIE                               00000007
+Hora                              0000000C
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+IncrementaHoras                   0000004D
+IncrementaRegistro50ms            00000047
+Incrementar                       0000003D
+IncrementarPulsador               PORTB,6
+Inicio                            00000005
+Intermitencia                     00000010
+LCD_2Lineas4Bits5x7               000000DB
+LCD_Auxiliar1                     00000017
+LCD_Auxiliar2                     00000018
+LCD_Borra                         000000D9
+LCD_BusDatos                      PORTB
+LCD_Byte                          00000108
+LCD_ByteCompleto                  0000010F
+LCD_Caracter                      000000DE
+LCD_CaracteresPorLinea            00000010
+LCD_CodigoCGROM                   000000E5
+LCD_CursorIncr                    000000C9
+LCD_CursorOFF                     000000D7
+LCD_CursorON                      000000D5
+LCD_Dato                          00000014
+LCD_DosEspaciosBlancos            000000FF
+MPASM 03.50 Released                         INT_RELOJ_02.ASM   10-9-2003  11:44:50         PAGE 16
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+LCD_EnheMayuscula                 000000EC
+LCD_EnheMinuscula                 000000E6
+LCD_Envia                         000000E0
+LCD_EnviaBlancos                  00000102
+LCD_EnviaByteLetra                0000011B
+LCD_EnviaComando                  000000DC
+LCD_EnviaOtroBlanco               00000103
+LCD_EscribeLCD                    000000B2
+LCD_FinCGROM                      000000F9
+LCD_FinVisualizaDigito            0000011D
+LCD_Grado                         000000F3
+LCD_GuardaDato                    00000015
+LCD_GuardaTRISB                   00000016
+LCD_Inicializa                    0000009A
+LCD_Linea1                        000000CB
+LCD_Linea2                        000000CD
+LCD_LineaEnBlanco                 000000FB
+LCD_Nibble                        00000113
+LCD_OFF                           000000D3
+LCD_PinEnable                     PORTA,2
+LCD_PinRS                         PORTA,0
+LCD_PinRW                         PORTA,1
+LCD_PosicionLinea1                000000CF
+LCD_PosicionLinea2                000000D1
+LCD_TresEspaciosBlancos           00000101
+LCD_UnEspacioBlanco               000000FD
+LCD_VisualizaAlto                 00000110
+LCD_VisualizaBajo                 00000112
+Minuto                            0000000D
+NOT_PD                            00000003
+NOT_RBPU                          00000007
+NOT_TO                            00000004
+OPTION_REG                        00000081
+PCL                               00000002
+PCLATH                            0000000A
+PORTA                             00000005
+PORTB                             00000006
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+Principal                         00000013
+R1Decima_BucleExterno             00000090
+R1Decima_BucleExterno2            0000008E
+R1Decima_BucleInterno             00000092
+R1ms_BucleExterno                 0000007A
+R1ms_BucleInterno                 0000007C
+RBIE                              00000003
+RBIF                              00000000
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+R_ContA                           00000011
+MPASM 03.50 Released                         INT_RELOJ_02.ASM   10-9-2003  11:44:50         PAGE 17
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+R_ContB                           00000012
+R_ContC                           00000013
+Registro50ms                      0000000F
+Reloj                             0000001D
+RetardoMicros                     00000066
+Retardo_100micros                 00000060
+Retardo_100ms                     0000006C
+Retardo_10micros                  00000053
+Retardo_10ms                      00000072
+Retardo_10s                       00000084
+Retardo_1Decima                   0000008D
+Retardo_1ms                       00000078
+Retardo_1s                        0000008A
+Retardo_200micros                 0000005D
+Retardo_200ms                     0000006A
+Retardo_20micros                  00000065
+Retardo_20ms                      00000070
+Retardo_20s                       00000082
+Retardo_2ms                       00000076
+Retardo_2s                        00000088
+Retardo_4micros                   00000059
+Retardo_500micros                 0000005A
+Retardo_500ms                     0000008C
+Retardo_50micros                  00000062
+Retardo_50ms                      0000006E
+Retardo_5micros                   00000058
+Retardo_5ms                       00000074
+Retardo_5s                        00000086
+Retardos_ms                       00000079
+Rmicros_Bucle                     00000067
+STATUS                            00000003
+Segundo                           0000000E
+ServicioInterrupcion              00000014
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+TMR0                              00000001
+TMR0_Carga50ms                    FFFFFF3D
+TRISA                             00000085
+TRISB                             00000086
+VisualizaMinutos                  00000032
+VisualizaReloj                    00000029
+W                                 00000000
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_CP_OFF                           00003FFF
+_CP_ON                            0000000F
+_HS_OSC                           00003FFE
+_LP_OSC                           00003FFC
+_PWRTE_OFF                        00003FFF
+MPASM 03.50 Released                         INT_RELOJ_02.ASM   10-9-2003  11:44:50         PAGE 18
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+_PWRTE_ON                         00003FF7
+_RC_OSC                           00003FFF
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FFD
+__16F84A                          00000001
+
+
+MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
+
+0000 : X---XXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0040 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0080 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+00C0 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0100 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX X---------------
+2000 : -------X-------- ---------------- ---------------- ----------------
+
+All other memory blocks unused.
+
+Program Memory Words Used:   302
+Program Memory Words Free:   722
+
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :     2 reported,     0 suppressed
+
+

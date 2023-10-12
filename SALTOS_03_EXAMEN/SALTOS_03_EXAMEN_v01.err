@@ -1,0 +1,6 @@
+Warning[205] E:\00.-MPLAB\00.-PIC16F84A\SALTOS_03_EXAMEN\SALTOS_03_EXAMEN_V01.ASM 2 : Found directive in column 1. (__CONFIG)
+Warning[205] E:\00.-MPLAB\00.-PIC16F84A\SALTOS_03_EXAMEN\SALTOS_03_EXAMEN_V01.ASM 8 : Found directive in column 1. (ORG)
+Message[302] E:\00.-MPLAB\00.-PIC16F84A\SALTOS_03_EXAMEN\SALTOS_03_EXAMEN_V01.ASM 11 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] E:\00.-MPLAB\00.-PIC16F84A\SALTOS_03_EXAMEN\SALTOS_03_EXAMEN_V01.ASM 13 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Warning[203] E:\00.-MPLAB\00.-PIC16F84A\SALTOS_03_EXAMEN\SALTOS_03_EXAMEN_V01.ASM 28 : Found opcode in column 1. (sleep)
+Warning[205] E:\00.-MPLAB\00.-PIC16F84A\SALTOS_03_EXAMEN\SALTOS_03_EXAMEN_V01.ASM 29 : Found directive in column 1. (END)

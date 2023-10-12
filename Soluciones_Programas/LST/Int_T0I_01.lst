@@ -1,0 +1,179 @@
+MPASM 03.50 Released                           INT_T0I_01.ASM   10-25-2003  22:33:01         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;************************************ Int_T0I_01.asm ************************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Por la línea 3 del puerto B se genera una onda cuadrada de 10 kHz, cada semiperiodo dura
+                      00010 ; 50 µs. Los tiempos de temporización se lograrán mediante la interrupción por desbordamiento
+                      00011 ; del Timer 0. A la línea de salida se puede conectar un altavoz que producirá un pitido.
+                      00012 ;
+                      00013 ; ZONA DE DATOS **********************************************************************
+                      00014 
+2007   3FF1           00015         __CONFIG   _CP_OFF &  _WDT_OFF & _PWRTE_ON & _XT_OSC
+                      00016         LIST       P=16F84A
+                      00017         INCLUDE  <P16F84A.INC>
+                      00001         LIST
+                      00002 ; P16F84A.INC  Standard Header File, Version 2.00    Microchip Technology, Inc.
+                      00134         LIST
+                      00018 
+                      00019         CBLOCK  0x0C
+                      00020         ENDC
+                      00021 
+  FFFFFFCE            00022 TMR0_Carga50us  EQU     -d'50'
+                      00023 #DEFINE         Salida  PORTB,3
+                      00024 
+                      00025 ; ZONA DE CÓDIGOS ********************************************************************
+                      00026 
+0000                  00027         ORG     0
+0000   2805           00028         goto    Inicio
+0004                  00029         ORG     4                       ; Vector de interrupción.
+0004   280F           00030         goto    Timer0_Interrupcion
+0005                  00031 Inicio
+0005   1683           00032         bsf     STATUS,RP0              ; Acceso al Banco 1.
+0006   1186           00033         bcf     Salida                  ; Línea configurada como salida.
+0007   3008           00034         movlw   b'00001000'
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0008   0081           00035         movwf   OPTION_REG              ; Sin prescaler para TMR0 (se asigna al Watchdog).
+0009   1283           00036         bcf     STATUS,RP0              ; Acceso al Banco 0.
+000A   30CE           00037         movlw   TMR0_Carga50us          ; Carga el TMR0.
+000B   0081           00038         movwf   TMR0
+000C   30A0           00039         movlw   b'10100000'
+000D   008B           00040         movwf   INTCON                  ; Autoriza interrupción TOI y la general (GIE).
+000E                  00041 Principal                                       ; No puede pasar a modo de bajo consumo
+000E   280E           00042         goto    $                       ; porque detendría el Timer 0.
+                      00043 
+                      00044 ; Subrutina "Timer0_Interrupcion" -------------------------------------------------------
+                      00045 ;
+                      00046 ; Como el PIC trabaja a una frecuencia de 4 MHz el TMR0 evoluciona cada microsegundo. Para
+                      00047 ; conseguir un retardo de 50 µs con un prescaler de 1 el TMR0 tiene que contar 50 impulsos.
+                      00048 ; Efectivamente: 1 µs x 50 x 1 = 50 µs.
+                      00049 ;
+MPASM 03.50 Released                           INT_T0I_01.ASM   10-25-2003  22:33:01         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+000F                  00050 Timer0_Interrupcion
+000F   30CE           00051         movlw   TMR0_Carga50us
+0010   0081           00052         movwf   TMR0                    ; Recarga el timer TMR0.
+0011   1986           00053         btfsc   Salida                  ; Testea el anterior estado de la salida.
+0012   2815           00054         goto    EstabaAlto
+0013                  00055 EstabaBajo
+0013   1586           00056         bsf     Salida                  ; Estaba bajo y lo pasa a alto.
+0014   2816           00057         goto    FinInterrupcion
+0015                  00058 EstabaAlto
+0015   1186           00059         bcf     Salida                  ; Estaba alto y lo pasa a bajo.
+0016                  00060 FinInterrupcion
+0016   110B           00061         bcf     INTCON,T0IF             ; Repone flag del TMR0.
+0017   0009           00062         retfie
+                      00063 
+                      00064 ; Comprobando con el simulador del MPLAB se obtienen unos tiempos para la onda cuadrada de 
+                      00065 ; 56 µs para el nivel alto y de 55 µs para el bajo.
+                      00066 
+                      00067         END
+MPASM 03.50 Released                           INT_T0I_01.ASM   10-25-2003  22:33:01         PAGE  3
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+C                                 00000000
+DC                                00000001
+EEADR                             00000009
+EECON1                            00000088
+EECON2                            00000089
+EEDATA                            00000008
+EEIE                              00000006
+EEIF                              00000004
+EstabaAlto                        00000015
+EstabaBajo                        00000013
+F                                 00000001
+FSR                               00000004
+FinInterrupcion                   00000016
+GIE                               00000007
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+Inicio                            00000005
+NOT_PD                            00000003
+NOT_RBPU                          00000007
+NOT_TO                            00000004
+OPTION_REG                        00000081
+PCL                               00000002
+PCLATH                            0000000A
+PORTA                             00000005
+PORTB                             00000006
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+Principal                         0000000E
+RBIE                              00000003
+RBIF                              00000000
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+STATUS                            00000003
+Salida                            PORTB,3
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+TMR0                              00000001
+TMR0_Carga50us                    FFFFFFCE
+TRISA                             00000085
+TRISB                             00000086
+Timer0_Interrupcion               0000000F
+W                                 00000000
+WR                                00000001
+WREN                              00000002
+MPASM 03.50 Released                           INT_T0I_01.ASM   10-25-2003  22:33:01         PAGE  4
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+WRERR                             00000003
+Z                                 00000002
+_CP_OFF                           00003FFF
+_CP_ON                            0000000F
+_HS_OSC                           00003FFE
+_LP_OSC                           00003FFC
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC                           00003FFF
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FFD
+__16F84A                          00000001
+
+
+MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
+
+0000 : X---XXXXXXXXXXXX XXXXXXXX-------- ---------------- ----------------
+2000 : -------X-------- ---------------- ---------------- ----------------
+
+All other memory blocks unused.
+
+Program Memory Words Used:    21
+Program Memory Words Free:  1003
+
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :     1 reported,     0 suppressed
+
+

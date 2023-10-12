@@ -1,0 +1,191 @@
+MPASM 03.50 Released                           INT_T0I_03.ASM   10-10-2003  13:15:04         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;************************************ Int_T0I_03.asm ************************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84A. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; Un LED conectado a la línea 1 del puerto de salida se enciende durante 500 ms y apaga
+                      00010 ; durante otros 500 ms. Los tiempos de temporización se realiza mediante la  utilización
+                      00011 ; de la interrrupción por desbordamiento del Timer 0 del PIC.
+                      00012 ;
+                      00013 ; ZONA DE DATOS **********************************************************************
+                      00014 
+2007   3FF1           00015         __CONFIG   _CP_OFF &  _WDT_OFF & _PWRTE_ON & _XT_OSC
+                      00016         LIST       P=16F84A
+                      00017         INCLUDE  <P16F84A.INC>
+                      00001         LIST
+                      00002 ; P16F84A.INC  Standard Header File, Version 2.00    Microchip Technology, Inc.
+                      00134         LIST
+                      00018 
+                      00019         CBLOCK  0x0C
+  0000000C            00020         Registro50ms                    ; Registro auxiliar para conseguir una temporización
+                      00021         ENDC                            ; mayor.
+                      00022 
+  0000000A            00023 Carga500ms      EQU     d'10'
+  FFFFFF3D            00024 TMR0_Carga50ms  EQU     -d'195'
+                      00025 #DEFINE         LED     PORTB,1
+                      00026 
+                      00027 ; ZONA DE CÓDIGOS ********************************************************************
+                      00028 
+0000                  00029         ORG     0                       ; El programa comienza en la dirección 0.
+0000   2805           00030         goto    Inicio
+0004                  00031         ORG     4                       ; Vector de interrupción
+0004   2811           00032         goto    Timer0_Interrupcion
+0005                  00033 Inicio
+0005   1683           00034         bsf     STATUS,RP0              ; Acceso al Banco 1.
+0006   1086           00035         bcf     LED                     ; Línea del LED configurada como salida.
+0007   3007           00036         movlw   b'00000111'
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0008   0081           00037         movwf   OPTION_REG              ; Prescaler de 256 para el TMR0
+0009   1283           00038         bcf     STATUS,RP0              ; Acceso al Banco 0.
+000A   303D           00039         movlw   TMR0_Carga50ms          ; Carga el TMR0.
+000B   0081           00040         movwf   TMR0
+000C   300A           00041         movlw   Carga500ms
+000D   008C           00042         movwf   Registro50ms
+000E   30A0           00043         movlw   b'10100000'
+000F   008B           00044         movwf   INTCON                  ; Activa interrupción del TMR0 (TOIE) y la general.
+0010                  00045 Principal                               ; No se puede utilizar el modo bajo consumo
+0010   2810           00046         goto    $                       ; porque el timer se detiene.
+                      00047 
+                      00048 ; Subrutina "Timer0_Interrupcion" -------------------------------------------------------
+                      00049 ;
+MPASM 03.50 Released                           INT_T0I_03.ASM   10-10-2003  13:15:04         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00050 ; Como el PIC trabaja a una frecuencia de 4MHz, el TMR0 evoluciona cada microsegundo.
+                      00051 ; El bucle central se hace de un tiempo de 50 ms. Para ello se utiliza un prescaler
+                      00052 ; de 256 y el TMR0 tiene que contar 195 impulsos. Efectivamente:
+                      00053 ; 195 x 256 = 49929 µs = 50 ms aproximadamente. 
+                      00054 
+                      00055 ; Para conseguir una temporización de 500 ms, habrá que repetir 10 veces el lazo de 50 ms.
+                      00056 ; Con el simulador del MPLAB se comprueba que los tiempos son: En alto 499261 µs y en
+                      00057 ; bajo 499258 µs. 
+                      00058 
+0011                  00059 Timer0_Interrupcion
+0011   303D           00060         movlw   TMR0_Carga50ms
+0012   0081           00061         movwf   TMR0                    ; Recarga el TMR0.
+0013   0B8C           00062         decfsz  Registro50ms,F          ; Decrementa el contador.
+0014   281C           00063         goto    FinInterrupcion
+0015   300A           00064         movlw   Carga500ms
+0016   008C           00065         movwf   Registro50ms            ; Repone el contador nuevamente 
+0017   1886           00066         btfsc   LED                     ; Testea el último estado del LED.
+0018   281B           00067         goto    EstabaEncendido 
+0019                  00068 EstabaApagado
+0019   1486           00069         bsf     LED                     ; Estaba apagado y lo enciende.
+001A   281C           00070         goto    FinInterrupcion
+001B                  00071 EstabaEncendido
+001B   1086           00072         bcf     LED                     ; Estaba encendido y lo apaga.
+001C                  00073 FinInterrupcion
+001C   110B           00074         bcf     INTCON,T0IF             ; Repone flag del TMR0.
+001D   0009           00075         retfie
+                      00076 
+                      00077         END
+MPASM 03.50 Released                           INT_T0I_03.ASM   10-10-2003  13:15:04         PAGE  3
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+C                                 00000000
+Carga500ms                        0000000A
+DC                                00000001
+EEADR                             00000009
+EECON1                            00000088
+EECON2                            00000089
+EEDATA                            00000008
+EEIE                              00000006
+EEIF                              00000004
+EstabaApagado                     00000019
+EstabaEncendido                   0000001B
+F                                 00000001
+FSR                               00000004
+FinInterrupcion                   0000001C
+GIE                               00000007
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+Inicio                            00000005
+LED                               PORTB,1
+NOT_PD                            00000003
+NOT_RBPU                          00000007
+NOT_TO                            00000004
+OPTION_REG                        00000081
+PCL                               00000002
+PCLATH                            0000000A
+PORTA                             00000005
+PORTB                             00000006
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+Principal                         00000010
+RBIE                              00000003
+RBIF                              00000000
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+Registro50ms                      0000000C
+STATUS                            00000003
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+TMR0                              00000001
+TMR0_Carga50ms                    FFFFFF3D
+TRISA                             00000085
+TRISB                             00000086
+Timer0_Interrupcion               00000011
+W                                 00000000
+MPASM 03.50 Released                           INT_T0I_03.ASM   10-10-2003  13:15:04         PAGE  4
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_CP_OFF                           00003FFF
+_CP_ON                            0000000F
+_HS_OSC                           00003FFE
+_LP_OSC                           00003FFC
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC                           00003FFF
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FFD
+__16F84A                          00000001
+
+
+MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
+
+0000 : X---XXXXXXXXXXXX XXXXXXXXXXXXXX-- ---------------- ----------------
+2000 : -------X-------- ---------------- ---------------- ----------------
+
+All other memory blocks unused.
+
+Program Memory Words Used:    27
+Program Memory Words Free:   997
+
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :     1 reported,     0 suppressed
+
+

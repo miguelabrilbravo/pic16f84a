@@ -1,0 +1,245 @@
+MPASM  5.51                    RETARDO_01.ASM   6-11-2023  20:18:08         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;************************************ Retardo_01.asm ************************************
+                      00002 ;
+                      00003 ;       ===================================================================
+                      00004 ;         Del libro "MICROCONTROLADOR PIC16F84. DESARROLLO DE PROYECTOS"
+                      00005 ;         E. Palacios, F. Remiro y L. López.
+                      00006 ;         Editorial Ra-Ma.  www.ra-ma.es
+                      00007 ;       ===================================================================
+                      00008 ;
+                      00009 ; El LED conectado a la línea 0 del puerto de salida se enciende durante 400 ms y se
+                      00010 ; apaga durante 300 ms. 
+                      00011 ;
+                      00012 ; ZONA DE DATOS **********************************************************************
+                      00013 
+2007   3FF1           00014         __CONFIG   _CP_OFF &  _WDT_OFF & _PWRTE_ON & _XT_OSC
+                      00015         LIST       P=16F84A
+                      00016         INCLUDE  <P16F84A.INC>
+                      00001         LIST
+                      00002 
+                      00003 ;==========================================================================
+                      00004 ;  MPASM PIC16F84A processor include
+                      00005 ; 
+                      00006 ;  (c) Copyright 1999-2013 Microchip Technology, All rights reserved
+                      00007 ;==========================================================================
+                      00008 
+                      00208         LIST
+                      00017 
+                      00018         CBLOCK  0x0C                    ; En esta posición empieza la RAM de usuario.
+                      00019         ENDC
+                      00020 
+                      00021 #DEFINE  LED    PORTB,0
+                      00022 
+                      00023 ; ZONA DE CÓDIGOS *******************************************************************
+                      00024 
+0000                  00025         ORG     0
+0000                  00026 Inicio
+0000   1683           00027         bsf     STATUS,RP0              ; Acceso al Banco 1.
+0001   1006           00028         bcf     LED                     ; Línea del LED configurada como salida.
+0002   1283           00029         bcf     STATUS,RP0              ; Acceso al Banco 0.
+0003                  00030 Principal
+0003   1406           00031         bsf     LED                     ; Enciende el LED
+0004   200A           00032         call    Retardo_200ms           ; durante la suma de este tiempo.
+0005   200A           00033         call    Retardo_200ms
+0006   1006           00034         bcf     LED                     ; Lo apaga durante la suma de los siguientes
+0007   200A           00035         call    Retardo_200ms           ; retardos.
+0008   200C           00036         call    Retardo_100ms
+0009   2803           00037         goto    Principal
+                      00038         
+                      00039 ; Subrutinas "Retardo_200ms" y "Retardo_100ms"-------------------------------------------
+                      00040 ;
+                      00041         CBLOCK
+  0000000C            00042         R_ContA                         ; Contadores para los retardos.
+  0000000D            00043         R_ContB
+                      00044         ENDC
+MPASM  5.51                    RETARDO_01.ASM   6-11-2023  20:18:08         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00045 
+000A                  00046 Retardo_200ms                           ; La llamada "call" aporta 2 ciclos máquina.
+000A   30C8           00047         movlw   d'200'                  ; Aporta 1 ciclo máquina. Este es el valor de "M".
+000B   280F           00048         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+000C                  00049 Retardo_100ms                           ; La llamada "call" aporta 2 ciclos máquina.
+000C   3064           00050         movlw   d'100'                  ; Aporta 1 ciclo máquina. Este es el valor de "M".
+000D   280F           00051         goto    Retardos_ms             ; Aporta 2 ciclos máquina.
+000E                  00052 Retardo_1ms                             ; La llamada "call" aporta 2 ciclos máquina.
+000E   3001           00053         movlw   d'1'                    ; Aporta 1 ciclo máquina. Este es el valor de "M".
+                      00054 ;
+                      00055 ; El próximo bloque "Retardos_ms" tarda:
+                      00056 ; 1 + M + M + KxM + (K-1)xM + Mx2 + (K-1)Mx2 + (M-1) + 2 + (M-1)x2 + 2 =
+                      00057 ; = (2 + 4M + 4KM) ciclos máquina. Para K=249 y M=1 supone 1002 ciclos máquina
+                      00058 ; que a 4 MHz son 1002 µs = 1 ms.
+                      00059 ;
+000F                  00060 Retardos_ms
+000F   008D           00061         movwf   R_ContB                 ; Aporta 1 ciclo máquina.
+0010                  00062 R1ms_BucleExterno
+0010   30F9           00063         movlw   d'249'                  ; Aporta Mx1 ciclos máquina. Este es el valor de "K".
+0011   008C           00064         movwf   R_ContA                 ; Aporta Mx1 ciclos máquina.
+0012                  00065 R1ms_BucleInterno
+0012   0000           00066         nop                             ; Aporta KxMx1 ciclos máquina.
+0013   0B8C           00067         decfsz  R_ContA,F               ; (K-1)xMx1 cm (cuando no salta) + Mx2 cm (al saltar).
+0014   2812           00068         goto    R1ms_BucleInterno               ; Aporta (K-1)xMx2 ciclos máquina.
+0015   0B8D           00069         decfsz  R_ContB,F               ; (M-1)x1 cm (cuando no salta) + 2 cm (al saltar).
+0016   2810           00070         goto    R1ms_BucleExterno       ; Aporta (M-1)x2 ciclos máquina.
+0017   0008           00071         return                          ; El salto de retorno aporta 2 ciclos máquina.
+                      00072 ;
+                      00073 ;En total estas subrutinas tardan:
+                      00074 ; - Retardo_200ms:      2 + 1 + 2 + (2 + 4M + 4KM) = 200007 cm = 200 ms. (M=200 y K=249).
+                      00075 ; - Retardo_100ms:      2 + 1 + 2 + (2 + 4M + 4KM) = 100007 cm = 100 ms. (M=100 y K=249).
+                      00076 ; - Retardo_1ms  :      2 + 1     + (2 + 4M + 4KM) =   1005 cm =   1 ms. (M=  1 y K=249).
+                      00077 
+                      00078         END
+MPASM  5.51                    RETARDO_01.ASM   6-11-2023  20:18:08         PAGE  3
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+C                                 00000000
+DC                                00000001
+EEADR                             00000009
+EECON1                            00000088
+EECON2                            00000089
+EEDATA                            00000008
+EEIE                              00000006
+EEIF                              00000004
+F                                 00000001
+FSR                               00000004
+GIE                               00000007
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+Inicio                            00000000
+LED                               PORTB,0
+NOT_PD                            00000003
+NOT_RBPU                          00000007
+NOT_TO                            00000004
+OPTION_REG                        00000081
+PCL                               00000002
+PCLATH                            0000000A
+PORTA                             00000005
+PORTB                             00000006
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+Principal                         00000003
+R1ms_BucleExterno                 00000010
+R1ms_BucleInterno                 00000012
+RA0                               00000000
+RA1                               00000001
+RA2                               00000002
+RA3                               00000003
+RA4                               00000004
+RB0                               00000000
+RB1                               00000001
+RB2                               00000002
+RB3                               00000003
+RB4                               00000004
+RB5                               00000005
+RB6                               00000006
+RB7                               00000007
+RBIE                              00000003
+RBIF                              00000000
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+R_ContA                           0000000C
+MPASM  5.51                    RETARDO_01.ASM   6-11-2023  20:18:08         PAGE  4
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+R_ContB                           0000000D
+Retardo_100ms                     0000000C
+Retardo_1ms                       0000000E
+Retardo_200ms                     0000000A
+Retardos_ms                       0000000F
+STATUS                            00000003
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+TMR0                              00000001
+TMR0IE                            00000005
+TMR0IF                            00000002
+TRISA                             00000085
+TRISA0                            00000000
+TRISA1                            00000001
+TRISA2                            00000002
+TRISA3                            00000003
+TRISA4                            00000004
+TRISB                             00000086
+TRISB0                            00000000
+TRISB1                            00000001
+TRISB2                            00000002
+TRISB3                            00000003
+TRISB4                            00000004
+TRISB5                            00000005
+TRISB6                            00000006
+TRISB7                            00000007
+W                                 00000000
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_CONFIG                           00002007
+_CP_OFF                           00003FFF
+_CP_ON                            0000000F
+_DEVID1                           00002006
+_FOSC_EXTRC                       00003FFF
+_FOSC_HS                          00003FFE
+_FOSC_LP                          00003FFC
+_FOSC_XT                          00003FFD
+_HS_OSC                           00003FFE
+_IDLOC0                           00002000
+_IDLOC1                           00002001
+_IDLOC2                           00002002
+_IDLOC3                           00002003
+_LP_OSC                           00003FFC
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC                           00003FFF
+_WDTE_OFF                         00003FFB
+_WDTE_ON                          00003FFF
+_WDT_OFF                          00003FFB
+MPASM  5.51                    RETARDO_01.ASM   6-11-2023  20:18:08         PAGE  5
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FFD
+__16F84A                          00000001
+__DEBUG                           1
+
+
+MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
+
+0000 : XXXXXXXXXXXXXXXX XXXXXXXX-------- ---------------- ----------------
+2000 : -------X-------- ---------------- ---------------- ----------------
+
+All other memory blocks unused.
+
+Program Memory Words Used:    24
+Program Memory Words Free:  1000
+
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :     0 reported,     0 suppressed
+
+

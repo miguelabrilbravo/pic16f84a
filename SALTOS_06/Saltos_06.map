@@ -1,0 +1,40 @@
+MPLINK 4.49, Linker
+Linker Map File - Created Thu Jun 08 20:50:24 2023
+
+                                 Section Info
+                  Section       Type    Address   Location Size(Bytes)
+                ---------  ---------  ---------  ---------  ---------
+                   .org_0       code   0x000000    program   0x000000
+                   .org_1       code   0x000000    program   0x000026
+ .config_2007_SALTOS_06.O       code   0x002007    program   0x000002
+
+
+
+                              Program Memory Usage 
+                               Start         End      
+                           ---------   ---------      
+                            0x000000    0x000012      
+                            0x002007    0x002007      
+            20 out of 1094 program addresses used, program memory utilization is 1%
+
+
+
+                              Symbols - Sorted by Name
+                     Name    Address   Location    Storage File                     
+                ---------  ---------  ---------  --------- ---------                
+             ActivaSalida   0x000011    program     static E:\00.-MPLAB\00.-PIC16F84A\SALTOS_06\Saltos_06.asm
+          DesplazaOtraVez   0x00000c    program     static E:\00.-MPLAB\00.-PIC16F84A\SALTOS_06\Saltos_06.asm
+                   Inicio   0x000000    program     static E:\00.-MPLAB\00.-PIC16F84A\SALTOS_06\Saltos_06.asm
+                Principal   0x000005    program     static E:\00.-MPLAB\00.-PIC16F84A\SALTOS_06\Saltos_06.asm
+
+
+
+                              Symbols - Sorted by Address
+                     Name    Address   Location    Storage File                     
+                ---------  ---------  ---------  --------- ---------                
+                   Inicio   0x000000    program     static E:\00.-MPLAB\00.-PIC16F84A\SALTOS_06\Saltos_06.asm
+                Principal   0x000005    program     static E:\00.-MPLAB\00.-PIC16F84A\SALTOS_06\Saltos_06.asm
+          DesplazaOtraVez   0x00000c    program     static E:\00.-MPLAB\00.-PIC16F84A\SALTOS_06\Saltos_06.asm
+             ActivaSalida   0x000011    program     static E:\00.-MPLAB\00.-PIC16F84A\SALTOS_06\Saltos_06.asm
+
+
